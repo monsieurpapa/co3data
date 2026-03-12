@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Détail Utilisateurs" %} | CO3DATA{% endblock %}
+
+{% block content %}
+<div class="card mb-3">
+    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">{% trans "Gestion des Utilisateurs" %}</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive scrollbar">
+            <table class="table table-sm table-striped fs--1 mb-0 overflow-hidden">
+                <thead class="bg-200 text-900">
+                    <tr>
+                        <th class="align-middle">{% trans "Nom" %}</th>
+                        <th class="align-middle">{% trans "Email" %}</th>
+                        <th class="align-middle">{% trans "Rôle" %}</th>
+                        <th class="align-middle">{% trans "Statut" %}</th>
+                        <th class="align-middle text-end">{% trans "Action" %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in user_list %}
+                    <tr>
+                        <td class="align-middle fw-semi-bold">{{ user.get_full_name|default:user.username }}</td>
+                        <td class="align-middle">{{ user.email }}</td>
+                        <td class="align-middle">
+                            {% if user.is_superuser %}
+                            <span class="badge badge-soft-danger">{% trans "Superuser" %}</span>
+                            {% elif user.is_staff %}
+                            <span class="badge badge-soft-warning">{% trans "Staff" %}</span>
+                            {% else %}
+                            <span class="badge badge-soft-info">{% trans "User" %}</span>
+                            {% endif %}
+                        </td>
+                        <td class="align-middle">
+                            {% if user.is_active %}
+                            <span class="badge badge-soft-success">{% trans "Actif" %}</span>
+                            {% else %}
+                            <span class="badge badge-soft-secondary">{% trans "Inactif" %}</span>
+                            {% endif %}
+                        </td>
+                        <td class="align-middle text-end">
+                            <a href="#" class="btn btn-link p-0" title="Edit"><span class="fas fa-edit"></span></a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

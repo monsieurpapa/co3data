@@ -53,22 +53,21 @@ INSTALLED_APPS = [
     'django_celery_beat',
 
     # Local apps
-    'accounting',
-    'assets',
-    'budget',
-    'cashflow',
     'core',
-    'inventory',
-    'invoicing',
-    'organization',
-    'reporting',
     'users',
+    'cooperatives',
+    'analytics',
+    'questionnaires',
+    'sync',
 
+    'rest_framework',
 
     # Crispy Forms
     'crispy_forms',
     'crispy_bootstrap5',
 ]
+
+AUTH_USER_MODEL = 'users.User'
 SITE_ID = 1  
 AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',

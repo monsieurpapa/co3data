@@ -100,6 +100,14 @@
                 {% include 'includes/navbar-top.html' %}
                 {% endblock %}
 
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb mb-2">
+                        {% block breadcrumb %}
+                        <li class="breadcrumb-item"><a href="{% url 'analytics:dashboard' %}">{% trans "Accueil" %}</a></li>
+                        {% endblock %}
+                    </ol>
+                </nav>
+
                 {% block content %}{% endblock %}
 
                 {% block footer %}

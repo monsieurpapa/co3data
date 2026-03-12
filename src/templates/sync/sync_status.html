@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Synchronisation" %} | CO3DATA{% endblock %}
+
+{% block content %}
+<div class="row g-3 mb-3">
+    <div class="col-lg-8">
+        <div class="card h-100">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">{% trans "Appareils Enregistrés" %}</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive scrollbar">
+                    <table class="table table-sm table-striped fs--1 mb-0 overflow-hidden">
+                        <thead class="bg-200 text-900">
+                            <tr>
+                                <th class="align-middle">{% trans "ID Appareil" %}</th>
+                                <th class="align-middle">{% trans "Utilisateur" %}</th>
+                                <th class="align-middle">{% trans "Dernière Synchro" %}</th>
+                                <th class="align-middle text-end">{% trans "Statut" %}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for device in devices %}
+                            <tr>
+                                <td class="align-middle">{{ device.device_id }}</td>
+                                <td class="align-middle">{{ device.user.username }}</td>
+                                <td class="align-middle">{{ device.last_sync_at|date:"d/m/Y H:i" }}</td>
+                                <td class="align-middle text-end">
+                                    {% if device.is_active %}
+                                    <span class="badge badge-soft-success">{% trans "Actif" %}</span>
+                                    {% else %}
+                                    <span class="badge badge-soft-secondary">{% trans "Inactif" %}</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-center py-4">{% trans "Aucun appareil trouvé." %}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card h-100">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">{% trans "Changements en Attente" %}</h5>
+            </div>
+            <div class="card-body text-center">
+                <div class="display-4 fw-bold text-primary mb-2">{{ pending_changes_count }}</div>
+                <p class="text-700">{% trans "Modifications non traitées" %}</p>
+                <form method="post" action="#">
+                    {% csrf_token %}
+                    <button class="btn btn-falcon-default btn-sm w-100 mt-3" type="submit">
+                        <span class="fas fa-play me-1"></span>{% trans "Lancer le Traitement" %}
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header bg-light">
+        <h5 class="mb-0">{% trans "Journal de Synchronisation" %}</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive scrollbar">
+            <table class="table table-sm table-striped fs--1 mb-0 overflow-hidden">
+                <thead class="bg-200 text-900">
+                    <tr>
+                        <th class="align-middle">{% trans "Date" %}</th>
+                        <th class="align-middle">{% trans "Modèle" %}</th>
+                        <th class="align-middle">{% trans "Action" %}</th>
+                        <th class="align-middle text-end">{% trans "Statut" %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for change in recent_changes %}
+                    <tr>
+                        <td class="align-middle">{{ change.timestamp|date:"d/m/Y H:i" }}</td>
+                        <td class="align-middle text-uppercase">{{ change.content_type.model }}</td>
+                        <td class="align-middle text-uppercase">{{ change.get_change_type_display }}</td>
+                        <td class="align-middle text-end">
+                            {% if change.is_synced %}
+                            <span class="badge badge-soft-success">{% trans "Traité" %}</span>
+                            {% else %}
+                            <span class="badge badge-soft-warning">{% trans "En attente" %}</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-center py-4">{% trans "Aucun changement récent." %}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

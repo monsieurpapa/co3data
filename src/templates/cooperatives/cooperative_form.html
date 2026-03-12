@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% load i18n crispy_forms_tags %}
+
+{% block title %}
+    {% if object %}{% trans "Modifier la Coopérative" %}{% else %}{% trans "Nouvelle Coopérative" %}{% endif %} | CO3DATA
+{% endblock %}
+
+{% block breadcrumb %}
+    <li class="breadcrumb-item"><a href="{% url 'analytics:dashboard' %}">{% trans "Accueil" %}</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'cooperatives:cooperative_list' %}">{% trans "Coopératives" %}</a></li>
+    <li class="breadcrumb-item active" aria-current="page">
+        {% if object %}{% trans "Modifier" %}{% else %}{% trans "Nouveau" %}{% endif %}
+    </li>
+{% endblock %}
+
+{% block content %}
+<div class="card mb-3">
+    <div class="card-header bg-light">
+        <div class="row align-items-center">
+            <div class="col">
+                <h5 class="mb-0">
+                    {% if object %}
+                        {% trans "Modifier la Coopérative" %}: {{ object.name }}
+                    {% else %}
+                        {% trans "Créer une Nouvelle Coopérative" %}
+                    {% endif %}
+                </h5>
+            </div>
+            <div class="col-auto">
+                <a href="{% url 'cooperatives:cooperative_list' %}" class="btn btn-falcon-default btn-sm">
+                    <span class="fas fa-times me-1"></span>{% trans "Annuler" %}
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <form method="post" novalidate>
+            {% csrf_token %}
+            <div class="row g-3">
+                <div class="col-md-8">{{ form.name|as_crispy_field }}</div>
+                <div class="col-md-4">{{ form.type|as_crispy_field }}</div>
+                <div class="col-md-6">{{ form.registration_number|as_crispy_field }}</div>
+                <div class="col-md-6">{{ form.establishment_date|as_crispy_field }}</div>
+                <div class="col-md-12">{{ form.contact_person|as_crispy_field }}</div>
+                <div class="col-md-12">{{ form.address|as_crispy_field }}</div>
+            </div>
+            
+            <div class="mt-4 text-end">
+                <button type="submit" class="btn btn-primary px-5">
+                    <span class="fas fa-save me-2"></span>
+                    {% if object %}{% trans "Enregistrer les modifications" %}{% else %}{% trans "Créer la Coopérative" %}{% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% load i18n crispy_forms_tags %}
+
+{% block title %}{{ questionnaire.title }} | {% trans "Collecte de Données" %}{% endblock %}
+
+{% block breadcrumb %}
+    <li class="breadcrumb-item"><a href="{% url 'analytics:dashboard' %}">{% trans "Accueil" %}</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'questionnaires:questionnaire_list' %}">{% trans "Questionnaires" %}</a></li>
+    <li class="breadcrumb-item active" aria-current="page">{% trans "Soumission" %}</li>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card mb-3">
+            <div class="card-header bg-light">
+                <div class="row align-items-center">
+                    <div class="col">
+                        <h5 class="mb-0">{{ questionnaire.title }}</h5>
+                        <p class="mb-0 fs--1 text-600">{{ questionnaire.description }}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if target_object %}
+                <div class="alert alert-info border-2 d-flex align-items-center" role="alert">
+                    <div class="bg-info me-3 icon-item"><span class="fas fa-info-circle text-white fs-3"></span></div>
+                    <p class="mb-0 flex-1">
+                        {% blocktrans with target=questionnaire.get_target_model_display name=target_object %}
+                            Vous soumettez ce questionnaire pour le/la <strong>{{ target }}</strong>: <strong>{{ name }}</strong>.
+                        {% endblocktrans %}
+                    </p>
+                </div>
+                {% endif %}
+
+                <form method="post" novalidate>
+                    {% csrf_token %}
+                    <div class="row g-3">
+                        {% for field in form %}
+                        <div class="col-12">
+                            {{ field|as_crispy_field }}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="mt-4 text-end">
+                        <button type="submit" class="btn btn-primary px-5">
+                            <span class="fas fa-paper-plane me-2"></span>{% trans "Envoyer la réponse" %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

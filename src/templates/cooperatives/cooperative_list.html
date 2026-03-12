@@ -1,0 +1,63 @@
+```html
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Cooperatives" %} | CO3DATA{% endblock %}
+
+{% block breadcrumb %}
+    <li class="breadcrumb-item"><a href="{% url 'analytics:dashboard' %}">{% trans "Accueil" %}</a></li>
+    <li class="breadcrumb-item active" aria-current="page">{% trans "Coopératives" %}</li>
+{% endblock %}
+
+{% block content %}
+<div class="card mb-3">
+    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">{% trans "Registre des Coopératives" %}</h5>
+        {% if user.role in 'admin,regional_officer' %}
+        <a href="{% url 'cooperatives:cooperative_add' %}" class="btn btn-falcon-primary btn-sm">
+            <span class="fas fa-plus me-1"></span>{% trans "Nouvelle Coopérative" %}
+        </a>
+        {% endif %}
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive scrollbar">
+            <table class="table table-sm table-striped fs--1 mb-0 overflow-hidden">
+                <thead class="bg-200 text-900">
+                    <tr>
+                        <th class="align-middle">{% trans "Nom" %}</th>
+                        <th class="align-middle">{% trans "Type" %}</th>
+                        <th class="align-middle">{% trans "Région" %}</th>
+                        <th class="align-middle">{% trans "Membres" %}</th>
+                        <th class="align-middle text-end">{% trans "Actions" %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for coop in cooperatives %}
+                    <tr>
+                        <td class="align-middle fw-semi-bold">
+                            <a href="{% url 'cooperatives:cooperative_detail' coop.pk %}">{{ coop.name }}</a>
+                        </td>
+                        <td class="align-middle">{{ coop.get_type_display }}</td>
+                        <td class="align-middle">{{ coop.region.name }}</td>
+                        <td class="align-middle">{{ coop.members.count }}</td>
+                        <td class="align-middle text-end">
+                            <a href="{% url 'cooperatives:cooperative_detail' coop.pk %}" class="btn btn-link p-0" title="View"><span class="fas fa-eye"></span></a>
+                            {% if user.role in 'admin,regional_officer,manager' %}
+                            <a href="{% url 'cooperatives:cooperative_edit' coop.pk %}" class="btn btn-link p-0 ms-2" title="Edit"><span class="fas fa-edit"></span></a>
+                            {% endif %}
+                            {% if user.role == 'admin' %}
+                            <a href="{% url 'cooperatives:cooperative_delete' coop.pk %}" class="btn btn-link p-0 ms-2 text-danger" title="Delete"><span class="fas fa-trash-alt"></span></a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center py-4">{% trans "Aucune coopérative trouvée." %}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,6 +1,5 @@
-# /home/ubuntu/accounting_project/src/core/models.py
 from django.db import models
-from django.contrib.auth.models import User
+from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.utils.translation import gettext_lazy as _
@@ -12,7 +11,7 @@ class Attachment(models.Model):
     content_object = GenericForeignKey("content_type", "object_id")
     file = models.FileField(_("File"), upload_to="attachments/%Y/%m/")
     description = models.CharField(_("Description"), max_length=255, blank=True, null=True)
-    uploaded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="uploaded_attachments")
+    uploaded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="uploaded_attachments")
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -34,7 +33,7 @@ class AuditLog(models.Model):
         (2, _("Change")),
         (3, _("Deletion")),
     ]
-    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, verbose_name=_("User"))
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, verbose_name=_("User"))
     action_time = models.DateTimeField(_("Action Time"), auto_now_add=True)
     content_type = models.ForeignKey(ContentType, on_delete=models.SET_NULL, null=True, blank=True, verbose_name=_("Content Type"))
     object_id = models.TextField(_("Object ID"), blank=True, null=True)
@@ -64,7 +63,7 @@ class SyncLog(models.Model):
         ("UPLOAD", _("Upload to Server")),
         ("DOWNLOAD", _("Download to Client")),
     ]
-    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="sync_logs")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="core_sync_logs")
     device_id = models.CharField(_("Device ID"), max_length=100, blank=True, null=True)
     sync_start_time = models.DateTimeField(_("Sync Start Time"), auto_now_add=True)
     sync_end_time = models.DateTimeField(_("Sync End Time"), null=True, blank=True)

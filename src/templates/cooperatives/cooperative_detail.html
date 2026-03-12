@@ -1,0 +1,110 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{{ cooperative.name }} | CO3DATA{% endblock %}
+
+{% block content %}
+<div class="card mb-3">
+    <div class="card-header bg-light">
+        <div class="row align-items-center">
+            <div class="col">
+                <h5 class="mb-0">{% trans "Détails de la Coopérative" %}: {{ cooperative.name }}</h5>
+            </div>
+            <div class="col-auto">
+                <a href="{% url 'cooperatives:cooperative_list' %}" class="btn btn-falcon-default btn-sm me-2">
+                    <span class="fas fa-arrow-left me-1"></span>{% trans "Retour" %}
+                </a>
+                <a href="#" class="btn btn-falcon-primary btn-sm">
+                    <span class="fas fa-edit me-1"></span>{% trans "Modifier" %}
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <p class="mb-1 fw-bold text-700">{% trans "Type" %}:</p>
+                <p class="text-1000">{{ cooperative.get_type_display }}</p>
+                <p class="mb-1 fw-bold text-700">{% trans "Numéro d'enregistrement" %}:</p>
+                <p class="text-1000">{{ cooperative.registration_number|default:"---" }}</p>
+            </div>
+            <div class="col-md-6">
+                <p class="mb-1 fw-bold text-700">{% trans "Région" %}:</p>
+                <p class="text-1000">{{ cooperative.region.name }}</p>
+                <p class="mb-1 fw-bold text-700">{% trans "Date de création" %}:</p>
+                <p class="text-1000">{{ cooperative.establishment_date|date:"d/m/Y"|default:"---" }}</p>
+            </div>
+            <div class="col-12 mt-3">
+                <p class="mb-1 fw-bold text-700">{% trans "Adresse" %}:</p>
+                <p class="text-1000">{{ cooperative.address|default:"---" }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header bg-light">
+        <h5 class="mb-0">{% trans "Collecte de Données" %}</h5>
+    </div>
+    <div class="card-body">
+        <div class="row g-3">
+            {% for q in available_questionnaires %}
+            <div class="col-md-6">
+                <div class="border rounded-1 p-3 bg-white shadow-none">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-1">{{ q.title }}</h6>
+                            <p class="mb-0 fs--1 text-600">{{ q.description|truncatewords:10 }}</p>
+                        </div>
+                        <a href="{% url 'questionnaires:questionnaire_submit' q.pk %}?target_id={{ cooperative.pk }}" class="btn btn-falcon-primary btn-sm">
+                            <span class="fas fa-edit me-1"></span>{% trans "Répondre" %}
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <p class="text-center text-500 py-3">{% trans "Aucun questionnaire disponible pour le moment." %}</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header bg-light d-flex justify-content-between">
+        <h5 class="mb-0">{% trans "Membres de la Coopérative" %}</h5>
+        <span class="badge badge-soft-info">{{ cooperative.members.count }} {% trans "Membres" %}</span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive scrollbar">
+            <table class="table table-sm table-striped fs--1 mb-0 overflow-hidden">
+                <thead class="bg-200 text-900">
+                    <tr>
+                        <th>ID</th>
+                        <th>{% trans "Nom" %}</th>
+                        <th>{% trans "Sexe" %}</th>
+                        <th>{% trans "Groupe d'âge" %}</th>
+                        <th class="text-end">{% trans "Actions" %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for member in cooperative.members.all %}
+                    <tr>
+                        <td>{{ member.member_id }}</td>
+                        <td><a href="{% url 'cooperatives:member_detail' member.pk %}">{{ member.first_name }} {{ member.last_name }}</a></td>
+                        <td>{{ member.get_gender_display }}</td>
+                        <td>{{ member.get_age_group_display }}</td>
+                        <td class="text-end">
+                            <a href="{% url 'cooperatives:member_detail' member.pk %}" class="btn btn-link p-0 ms-2" title="View"><span class="fas fa-eye"></span></a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center py-4">{% trans "Aucun membre trouvé." %}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

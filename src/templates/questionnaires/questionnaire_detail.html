@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{{ questionnaire.title }} | CO3DATA{% endblock %}
+
+{% block content %}
+<div class="card mb-3">
+    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+        <div>
+            <h5 class="mb-0">{{ questionnaire.title }}</h5>
+            <p class="mb-0 fs--1">{% trans "Cible" %}: {{ questionnaire.target_model|title }}</p>
+        </div>
+        <div class="col-auto">
+            <a href="{% url 'questionnaires:questionnaire_list' %}" class="btn btn-falcon-default btn-sm me-2">
+                <span class="fas fa-arrow-left me-1"></span>{% trans "Retour" %}
+            </a>
+        </div>
+    </div>
+    <div class="card-body">
+        <p class="text-1000">{{ questionnaire.description|default:"" }}</p>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header bg-light">
+        <h5 class="mb-0">{% trans "Questions" %}</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive scrollbar">
+            <table class="table table-sm table-striped fs--1 mb-0 overflow-hidden">
+                <thead class="bg-200 text-900">
+                    <tr>
+                        <th class="align-middle">#</th>
+                        <th class="align-middle">{% trans "Question" %}</th>
+                        <th class="align-middle">{% trans "Type" %}</th>
+                        <th class="align-middle text-end">{% trans "Obligatoire" %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for question in questionnaire.questions.all %}
+                    <tr>
+                        <td class="align-middle">{{ question.order }}</td>
+                        <td class="align-middle fw-semi-bold">{{ question.text }}</td>
+                        <td class="align-middle text-uppercase">{{ question.question_type }}</td>
+                        <td class="align-middle text-end">
+                            {% if question.required %}
+                            <span class="fas fa-check-circle text-success"></span>
+                            {% else %}
+                            <span class="fas fa-times-circle text-500"></span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-center py-4">{% trans "Aucune question trouvée." %}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

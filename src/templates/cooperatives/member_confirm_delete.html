@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Supprimer le Membre" %} | CO3DATA{% endblock %}
+
+{% block breadcrumb %}
+    <li class="breadcrumb-item"><a href="{% url 'analytics:dashboard' %}">{% trans "Accueil" %}</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'cooperatives:member_list' %}">{% trans "Membres" %}</a></li>
+    <li class="breadcrumb-item active" aria-current="page">{% trans "Suppression" %}</li>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-5">
+    <div class="col-md-6">
+        <div class="card shadow-soft text-center">
+            <div class="card-body p-5">
+                <div class="mb-4">
+                    <span class="fas fa-user-times text-danger fs-5"></span>
+                </div>
+                <h3>{% trans "Supprimer le membre" %}</h3>
+                <p class="text-700">
+                    {% blocktrans with first=object.first_name last=object.last_name %}
+                        Voulez-vous vraiment supprimer le membre <strong>{{ first }} {{ last }}</strong> ?
+                        Ses fermes et productions seront également supprimées.
+                    {% endblocktrans %}
+                </p>
+                <div class="mt-4">
+                    <form method="post">
+                        {% csrf_token %}
+                        <a href="{% url 'cooperatives:member_detail' object.pk %}" class="btn btn-falcon-default me-2">
+                            {% trans "Annuler" %}
+                        </a>
+                        <button type="submit" class="btn btn-danger px-4">
+                            {% trans "Supprimer" %}
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

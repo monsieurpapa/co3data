@@ -1,148 +1,33 @@
-# Accounting System
+# CO3DATA - Coffee and Cocoa Cooperatives System Database
 
-[![Django](https://img.shields.io/badge/Django-4.2-092E20?logo=django&logoColor=white)](https://www.djangoproject.com/)
-[![Python](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+CO3DATA is a robust, secure, and offline-capable digital ecosystem designed to centralize financial and non-financial data for cooperatives across Central Africa.
 
-A robust, extensible accounting system built with Django, supporting multi-organization fiscal management, double-entry bookkeeping (SYSCOHADA-compliant), and comprehensive financial reporting.
-
----
-
-## Table of Contents
-
-- [Features](#features)
-- [Architecture](#architecture)
-- [Quick Start](#quick-start)
-- [Documentation](#documentation)
-- [Development](#development)
-- [License](#license)
-
----
-
-## Features
-
-| Category | Capabilities |
-|----------|--------------|
-| **Accounting** | Chart of accounts (SYSCOHADA), fiscal years, periods, journals, journal entries, double-entry bookkeeping |
-| **Reporting** | Trial balance, general ledger, balance sheet, income statement |
-| **Budget** | Budgets, budget lines, commitments (purchase orders) |
-| **Cashflow** | Third parties, payments, receipts, bank reconciliation |
-| **Assets** | Fixed assets, depreciation methods, depreciation entries |
-| **Multi-tenant** | Organization-based isolation with role-based access control |
-
----
+## Core Features
+- **Inclusive Member Management**: Tracking production and demographic data (gender, youth).
+- **Financial Monitoring**: Verifiable financial records for cooperatives and members.
+- **Dynamic Questionnaires**: Customizable data collection modules.
+- **Real-time Analytics**: KPI tracking and performance dashboards.
+- **Offline Synchronization**: Mobile-first architecture for remote field data entry.
 
 ## Architecture
+- **Backend**: Django (Python 3.12)
+- **Database**: PostgreSQL
+- **Task Queue**: Celery with Redis
+- **Containerization**: Docker & Docker Compose
+- **Web Server**: Nginx & HAProxy
 
-```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│   Nginx     │────▶│  HAProxy    │────▶│   Django    │
-│  (Port 80)  │     │ (Load Bal.) │     │  (Gunicorn) │
-└─────────────┘     └─────────────┘     └──────┬──────┘
-                                               │
-                    ┌──────────────────────────┼──────────────────────────┐
-                    ▼                          ▼                          ▼
-             ┌─────────────┐            ┌─────────────┐            ┌─────────────┐
-             │ PostgreSQL  │            │    Redis    │            │   Celery    │
-             │   (db)      │            │   (broker)  │            │  Worker/Beat│
-             └─────────────┘            └─────────────┘            └─────────────┘
-```
+## Project Structure
+- `src/users`: Custom user management with role-based access control.
+- `src/cooperatives`: Management of cooperatives, members, farms, and records.
+- `src/questionnaires`: Dynamic survey and data collection engine.
+- `src/analytics`: KPI definition and report generation.
+- `src/sync`: Offline data synchronization service.
 
-**Tech Stack:** Django 4.2 · PostgreSQL 15 · Redis 7 · Celery · Gunicorn · Nginx · HAProxy
-
----
-
-## Quick Start
-
-### Using Docker (recommended)
-
-```bash
-# Clone the repository
-git clone <repo-url>
-cd accounting_project
-
-# Configure environment
-cp .env.example .env
-# Edit .env with your SECRET_KEY, POSTGRES_PASSWORD, etc.
-
-# Start all services
-docker-compose up -d
-
-# Run migrations (first run)
-docker-compose exec app python manage.py migrate
-
-# Create superuser
-docker-compose exec app python manage.py createsuperuser
-```
-
-Access the application at **http://localhost** (Nginx) or **http://localhost:8080** (HAProxy).
-
-### Local development
-
-```bash
-# Create and activate virtual environment
-python -m venv .venv
-source .venv/bin/activate   # Windows: .venv\Scripts\activate
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Set environment variables (or use .env)
-export DEBUG=True SECRET_KEY=dev-key-here
-
-# Run migrations (SQLite by default)
-python src/manage.py migrate
-
-# Create superuser
-python src/manage.py createsuperuser
-
-# Run development server
-python src/manage.py runserver 0.0.0.0:8000
-```
-
-Or use the Makefile:
-
-```bash
-make venv install migrate createsuperuser
-make run
-```
-
----
+## Setup Instructions
+1. Clone the repository.
+2. Configure `.env` based on `.env.example`.
+3. Run `docker-compose up --build`.
+4. Access the application at `http://localhost:8000`.
 
 ## Documentation
-
-| Document | Description |
-|----------|-------------|
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | System design, components, data flow, security |
-| [docs/SETUP.md](docs/SETUP.md) | Detailed setup: local, Docker, environment variables |
-| [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) | Development workflow, testing, code style, Makefile |
-| [docs/API.md](docs/API.md) | URL structure, views, and API overview |
-| [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Production deployment checklist and considerations |
-| [CONTRIBUTING.md](CONTRIBUTING.md) | Contribution guidelines and pull request process |
-
----
-
-## Development
-
-| Command | Description |
-|---------|-------------|
-| `make run` | Start development server |
-| `make test` | Run all tests |
-| `make migrate` | Apply database migrations |
-| `make shell` | Open Django shell |
-| `make lint` | Run flake8 linter |
-
-See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for full details.
-
----
-
-## License
-
-This project is licensed under the [MIT License](LICENSE).
-
----
-
-## Support
-
-- **Issues:** [GitHub Issue Tracker](https://github.com/your-org/accounting_project/issues)
-- **Contact:** See repository maintainers for support.
+Technical design details can be found in `CO3DATA_Technical_Design.md`.

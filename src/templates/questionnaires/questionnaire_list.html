@@ -1,0 +1,62 @@
+{% block breadcrumb %}
+    <li class="breadcrumb-item"><a href="{% url 'analytics:dashboard' %}">{% trans "Accueil" %}</a></li>
+    <li class="breadcrumb-item active" aria-current="page">{% trans "Questionnaires" %}</li>
+{% endblock %}
+
+{% block content %}
+<div class="card mb-3">
+    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">{% trans "Questionnaires Disponibles" %}</h5>
+        <div class="col-auto">
+            {% if user.role in 'admin,regional_officer,manager' %}
+            <a href="{% url 'questionnaires:submission_list' %}" class="btn btn-falcon-default btn-sm me-2">
+                <span class="fas fa-list me-1"></span>{% trans "Voir les Soumissions" %}
+            </a>
+            {% endif %}
+            {% if user.role == 'admin' %}
+            <a href="{% url 'admin:questionnaires_questionnaire_add' %}" class="btn btn-falcon-primary btn-sm">
+                <span class="fas fa-plus me-1"></span>{% trans "Nouveau Questionnaire" %}
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive scrollbar">
+            <table class="table table-sm table-striped fs--1 mb-0 overflow-hidden">
+                <thead class="bg-200 text-900">
+                    <tr>
+                        <th class="align-middle">{% trans "Titre" %}</th>
+                        <th class="align-middle">{% trans "Cible" %}</th>
+                        <th class="align-middle">{% trans "Questions" %}</th>
+                        <th class="align-middle">{% trans "Statut" %}</th>
+                        <th class="align-middle text-end">{% trans "Actions" %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for q in questionnaires %}
+                    <tr>
+                        <td class="align-middle fw-semi-bold">{{ q.title }}</td>
+                        <td class="align-middle">{{ q.target_model|title }}</td>
+                        <td class="align-middle">{{ q.questions.count }}</td>
+                        <td class="align-middle">
+                            {% if q.is_active %}
+                            <span class="badge badge-soft-success">{% trans "Public" %}</span>
+                            {% else %}
+                            <span class="badge badge-soft-secondary">{% trans "Brouillon" %}</span>
+                            {% endif %}
+                        </td>
+                        <td class="align-middle text-end">
+                            <a href="{% url 'questionnaires:questionnaire_detail' q.pk %}" class="btn btn-link p-0" title="View"><span class="fas fa-eye"></span></a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center py-4">{% trans "Aucun questionnaire trouvé." %}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

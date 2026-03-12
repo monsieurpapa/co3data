@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Détails de la Soumission" %} | CO3DATA{% endblock %}
+
+{% block breadcrumb %}
+    <li class="breadcrumb-item"><a href="{% url 'analytics:dashboard' %}">{% trans "Accueil" %}</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'questionnaires:submission_list' %}">{% trans "Soumissions" %}</a></li>
+    <li class="breadcrumb-item active" aria-current="page">{% trans "Détails" %}</li>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="card mb-3">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="mb-0">{% trans "Réponses au Questionnaire" %}: {{ submission.questionnaire.title }}</h5>
+                    <p class="mb-0 fs--1 text-600">{% trans "Soumis le" %} {{ submission.submitted_at|date:"d/m/Y H:i" }} {% trans "pour" %} <strong>{{ submission.content_object }}</strong></p>
+                </div>
+                <a href="{% url 'questionnaires:submission_list' %}" class="btn btn-falcon-default btn-sm">
+                    <span class="fas fa-arrow-left me-1"></span>{% trans "Retour" %}
+                </a>
+            </div>
+            <div class="card-body">
+                <div class="list-group list-group-flush">
+                    {% for answer in submission.answers.all %}
+                    <div class="list-group-item py-3">
+                        <div class="row">
+                            <div class="col-md-5">
+                                <p class="fw-semi-bold mb-1">{{ answer.question.text }}</p>
+                                <span class="badge badge-soft-info">{{ answer.question.get_question_type_display }}</span>
+                            </div>
+                            <div class="col-md-7">
+                                <p class="mb-0 text-700">
+                                    {% if answer.question.question_type == 'text' or answer.question.question_type == 'select' %}
+                                        {{ answer.value_text|default:"---" }}
+                                    {% elif answer.question.question_type == 'number' %}
+                                        {{ answer.value_number|default:"0" }}
+                                    {% elif answer.question.question_type == 'date' %}
+                                        {{ answer.value_date|date:"d/m/Y"|default:"---" }}
+                                    {% elif answer.question.question_type == 'boolean' %}
+                                        {% if answer.value_boolean %}
+                                            <span class="text-success fas fa-check-circle me-1"></span>{% trans "Oui" %}
+                                        {% else %}
+                                            <span class="text-danger fas fa-times-circle me-1"></span>{% trans "Non" %}
+                                        {% endif %}
+                                    {% endif %}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="card-footer bg-light text-end">
+                <p class="mb-0 fs--1 text-500">{% trans "Soumis par" %}: <strong>{{ submission.submitted_by.get_full_name }}</strong></p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

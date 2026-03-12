@@ -20,7 +20,7 @@
                 data-bs-placement="left" title="Toggle Navigation"><span class="navbar-toggle-icon"><span
                         class="toggle-line"></span></span></button>
         </div>
-        <a class="navbar-brand" href="{% url 'accounting:dashboard' %}">
+        <a class="navbar-brand" href="{% url 'analytics:dashboard' %}">
             <div class="d-flex align-items-center py-3" id="main-logo">
                 <picture>
                     <source srcset="{% static 'app/img/TicTacFlow_logo_dark.png' %}"
@@ -40,8 +40,8 @@
 
                 <!-- Dashboard -->
                 <li class="nav-item">
-                    <a class="nav-link {% if url_name == 'dashboard' %}active{% endif %}"
-                        href="{% url 'accounting:dashboard' %}" role="button">
+                    <a class="nav-link {% if app_name == 'analytics' and url_name == 'dashboard' %}active{% endif %}"
+                        href="{% url 'analytics:dashboard' %}" role="button">
                         <div class="d-flex align-items-center">
                             <span class="nav-link-icon"><span class="fas fa-chart-pie fs-1"></span></span>
                             <span class="nav-link-text ps-1">{% trans "Tableau de Bord" %}</span>
@@ -52,277 +52,46 @@
                 {% if user.is_authenticated %}
 
                 <!-- ============================================================ -->
-                <!-- ACCOUNTING -->
+                <!-- COOPERATIVES -->
                 <!-- ============================================================ -->
-                <li class="nav-divider">{% trans "Comptabilité" %}</li>
+                <li class="nav-divider">{% trans "Opérations" %}</li>
 
-                <!-- Chart of Accounts -->
+                <!-- Cooperatives -->
                 <li class="nav-item">
-                    <a class="nav-link {% if 'chart_of_account' in url_name %}active{% endif %}"
-                        href="{% url 'accounting:chart_of_accounts_list' %}" role="button">
+                    <a class="nav-link {% if app_name == 'cooperatives' and 'cooperative' in url_name %}active{% endif %}"
+                        href="{% url 'cooperatives:cooperative_list' %}" role="button">
                         <div class="d-flex align-items-center">
-                            <span class="nav-link-icon"><span class="fas fa-list-ul fs-1"></span></span>
-                            <span class="nav-link-text ps-1">{% trans "Plan Comptable" %}</span>
+                            <span class="nav-link-icon"><span class="fas fa-university fs-1"></span></span>
+                            <span class="nav-link-text ps-1">{% trans "Coopératives" %}</span>
                         </div>
                     </a>
                 </li>
 
-                <!-- Journals & Entries (dropdown) -->
+                <!-- Members -->
                 <li class="nav-item">
-                    <a class="nav-link dropdown-toggle {% if 'journal' in url_name %}active{% endif %}" href="#"
-                        id="journalsDropdown" data-bs-toggle="collapse" data-bs-target="#journalsMenu"
-                        aria-expanded="{% if 'journal' in url_name %}true{% else %}false{% endif %}"
-                        aria-controls="journalsMenu">
+                    <a class="nav-link {% if app_name == 'cooperatives' and 'member' in url_name %}active{% endif %}"
+                        href="{% url 'cooperatives:member_list' %}" role="button">
                         <div class="d-flex align-items-center">
-                            <span class="nav-link-icon"><span class="fas fa-book fs-1"></span></span>
-                            <span class="nav-link-text ps-1">{% trans "Journaux" %}</span>
-                        </div>
-                    </a>
-                    <div id="journalsMenu" class="collapse {% if 'journal' in url_name %}show{% endif %}">
-                        <ul class="nav flex-column ms-3">
-                            <li class="nav-item">
-                                <a class="nav-link {% if 'journal_list' in url_name or 'journal_create' in url_name or 'journal_edit' in url_name %}active{% endif %}"
-                                    href="{% url 'accounting:journal_list' %}">{% trans "Journaux Comptables" %}</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link {% if 'journal_entry' in url_name %}active{% endif %}"
-                                    href="{% url 'accounting:journal_entry_list' %}">{% trans "Écritures" %}</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="{% url 'accounting:journal_entry_create' %}">{% trans
-                                    "Nouvelle Écriture" %}</a>
-                            </li>
-                        </ul>
-                    </div>
-                </li>
-
-                <!-- Fiscal Years & Periods (dropdown) -->
-                <li class="nav-item">
-                    <a class="nav-link dropdown-toggle {% if 'fiscalyear' in url_name or 'accountingperiod' in url_name %}active{% endif %}"
-                        href="#" id="fiscalDropdown" data-bs-toggle="collapse" data-bs-target="#fiscalMenu"
-                        aria-expanded="{% if 'fiscalyear' in url_name or 'accountingperiod' in url_name %}true{% else %}false{% endif %}"
-                        aria-controls="fiscalMenu">
-                        <div class="d-flex align-items-center">
-                            <span class="nav-link-icon"><span class="fas fa-calendar-alt fs-1"></span></span>
-                            <span class="nav-link-text ps-1">{% trans "Exercices Fiscaux" %}</span>
-                        </div>
-                    </a>
-                    <div id="fiscalMenu"
-                        class="collapse {% if 'fiscalyear' in url_name or 'accountingperiod' in url_name %}show{% endif %}">
-                        <ul class="nav flex-column ms-3">
-                            <li class="nav-item">
-                                <a class="nav-link {% if 'fiscalyear' in url_name %}active{% endif %}"
-                                    href="{% url 'accounting:fiscalyear_list' %}">{% trans "Exercices" %}</a>
-                            </li>
-                        </ul>
-                    </div>
-                </li>
-
-                <!-- Projects & Services -->
-                <li class="nav-item">
-                    <a class="nav-link {% if 'project' in url_name %}active{% endif %}"
-                        href="{% url 'accounting:project_list' %}" role="button">
-                        <div class="d-flex align-items-center">
-                            <span class="nav-link-icon"><span class="fas fa-project-diagram fs-1"></span></span>
-                            <span class="nav-link-text ps-1">{% trans "Projets & Services" %}</span>
-                        </div>
-                    </a>
-                </li>
-
-                <!-- Fixed Assets -->
-                <li class="nav-item">
-                    <a class="nav-link {% if app_name == 'assets' %}active{% endif %}"
-                        href="{% url 'assets:fixedasset_list' %}" role="button">
-                        <div class="d-flex align-items-center">
-                            <span class="nav-link-icon"><span class="fas fa-building fs-1"></span></span>
-                            <span class="nav-link-text ps-1">{% trans "Immobilisations" %}</span>
+                            <span class="nav-link-icon"><span class="fas fa-users fs-1"></span></span>
+                            <span class="nav-link-text ps-1">{% trans "Membres" %}</span>
                         </div>
                     </a>
                 </li>
 
                 <!-- ============================================================ -->
-                <!-- REPORTING -->
+                <!-- DATA COLLECTION -->
                 <!-- ============================================================ -->
-                <li class="nav-divider">{% trans "Rapports Financiers" %}</li>
+                <li class="nav-divider">{% trans "Collecte de Données" %}</li>
 
                 <li class="nav-item">
-                    <a class="nav-link dropdown-toggle {% if app_name == 'reporting' %}active{% endif %}" href="#"
-                        id="reportingDropdown" data-bs-toggle="collapse" data-bs-target="#reportingMenu"
-                        aria-expanded="{% if app_name == 'reporting' %}true{% else %}false{% endif %}"
-                        aria-controls="reportingMenu">
+                    <a class="nav-link {% if app_name == 'questionnaires' %}active{% endif %}"
+                        href="{% url 'questionnaires:questionnaire_list' %}" role="button">
                         <div class="d-flex align-items-center">
-                            <span class="nav-link-icon"><span class="fas fa-file-invoice-dollar fs-1"></span></span>
-                            <span class="nav-link-text ps-1">{% trans "Rapports" %}</span>
-                        </div>
-                    </a>
-                    <div id="reportingMenu" class="collapse {% if app_name == 'reporting' %}show{% endif %}">
-                        <ul class="nav flex-column ms-3">
-                            <li class="nav-item">
-                                <a class="nav-link {% if url_name == 'index' %}active{% endif %}"
-                                    href="{% url 'reporting:index' %}">{% trans "Tous les Rapports" %}</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link {% if url_name == 'trial_balance' %}active{% endif %}"
-                                    href="{% url 'reporting:trial_balance' %}">{% trans "Balance Générale" %}</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link {% if url_name == 'balance_sheet' %}active{% endif %}"
-                                    href="{% url 'reporting:balance_sheet' %}">{% trans "Bilan" %}</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link {% if url_name == 'income_statement' %}active{% endif %}"
-                                    href="{% url 'reporting:income_statement' %}">{% trans "Compte de Résultat" %}</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link {% if url_name == 'general_ledger' %}active{% endif %}"
-                                    href="{% url 'reporting:general_ledger' %}">{% trans "Grand Livre" %}</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link {% if url_name == 'cash_flow_statement' %}active{% endif %}"
-                                    href="{% url 'reporting:cash_flow_statement' %}">{% trans "Flux de Trésorerie"
-                                    %}</a>
-                            </li>
-                        </ul>
-                    </div>
-                </li>
-
-                <!-- ============================================================ -->
-                <!-- BUDGETING -->
-                <!-- ============================================================ -->
-                <li class="nav-divider">{% trans "Budgétisation" %}</li>
-
-                <li class="nav-item">
-                    <a class="nav-link dropdown-toggle {% if app_name == 'budget' %}active{% endif %}" href="#"
-                        id="budgetDropdown" data-bs-toggle="collapse" data-bs-target="#budgetMenu"
-                        aria-expanded="{% if app_name == 'budget' %}true{% else %}false{% endif %}"
-                        aria-controls="budgetMenu">
-                        <div class="d-flex align-items-center">
-                            <span class="nav-link-icon"><span class="fas fa-wallet fs-1"></span></span>
-                            <span class="nav-link-text ps-1">{% trans "Budgets" %}</span>
-                        </div>
-                    </a>
-                    <div id="budgetMenu" class="collapse {% if app_name == 'budget' %}show{% endif %}">
-                        <ul class="nav flex-column ms-3">
-                            <li class="nav-item">
-                                <a class="nav-link {% if url_name == 'budget_list' %}active{% endif %}"
-                                    href="{% url 'budget:budget_list' %}">{% trans "Liste des Budgets" %}</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="{% url 'budget:budget_create' %}">{% trans "Nouveau Budget"
-                                    %}</a>
-                            </li>
-                        </ul>
-                    </div>
-                </li>
-
-                <!-- ============================================================ -->
-                <!-- TREASURY (Cash Flow) -->
-                <!-- ============================================================ -->
-                <li class="nav-divider">{% trans "Trésorerie" %}</li>
-
-                <li class="nav-item">
-                    <a class="nav-link dropdown-toggle {% if app_name == 'cashflow' %}active{% endif %}" href="#"
-                        id="cashflowDropdown" data-bs-toggle="collapse" data-bs-target="#cashflowMenu"
-                        aria-expanded="{% if app_name == 'cashflow' %}true{% else %}false{% endif %}"
-                        aria-controls="cashflowMenu">
-                        <div class="d-flex align-items-center">
-                            <span class="nav-link-icon"><span class="fas fa-hand-holding-usd fs-1"></span></span>
-                            <span class="nav-link-text ps-1">{% trans "Trésorerie" %}</span>
-                        </div>
-                    </a>
-                    <div id="cashflowMenu" class="collapse {% if app_name == 'cashflow' %}show{% endif %}">
-                        <ul class="nav flex-column ms-3">
-                            <li class="nav-item">
-                                <a class="nav-link {% if url_name == 'payment_list' %}active{% endif %}"
-                                    href="{% url 'cashflow:payment_list' %}">{% trans "Paiements" %}</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="{% url 'cashflow:payment_create' %}">{% trans "Nouveau
-                                    Paiement" %}</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link {% if url_name == 'receipt_list' %}active{% endif %}"
-                                    href="{% url 'cashflow:receipt_list' %}">{% trans "Encaissements" %}</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="{% url 'cashflow:receipt_create' %}">{% trans "Nouvel
-                                    Encaissement" %}</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link {% if url_name == 'thirdparty_list' %}active{% endif %}"
-                                    href="{% url 'cashflow:thirdparty_list' %}">{% trans "Tiers" %}</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link {% if url_name == 'bankreconciliation_list' %}active{% endif %}"
-                                    href="{% url 'cashflow:bankreconciliation_list' %}">{% trans "Rapprochement
-                                    Bancaire" %}</a>
-                            </li>
-                        </ul>
-                    </div>
-                </li>
-
-                <!-- ============================================================ -->
-                <!-- INVENTORY & SALES -->
-                <!-- ============================================================ -->
-                <li class="nav-divider">{% trans "Stock & Ventes" %}</li>
-
-                <li class="nav-item">
-                    <a class="nav-link {% if app_name == 'inventory' %}active{% endif %}"
-                        href="{% url 'inventory:index' %}" role="button">
-                        <div class="d-flex align-items-center">
-                            <span class="nav-link-icon"><span class="fas fa-boxes fs-1"></span></span>
-                            <span class="nav-link-text ps-1">{% trans "Gestion des Stocks" %}</span>
+                            <span class="nav-link-icon"><span class="fas fa-clipboard-list fs-1"></span></span>
+                            <span class="nav-link-text ps-1">{% trans "Questionnaires" %}</span>
                         </div>
                     </a>
                 </li>
-
-                <li class="nav-item">
-                    <a class="nav-link {% if app_name == 'invoicing' %}active{% endif %}"
-                        href="{% url 'invoicing:index' %}" role="button">
-                        <div class="d-flex align-items-center">
-                            <span class="nav-link-icon"><span class="fas fa-file-invoice fs-1"></span></span>
-                            <span class="nav-link-text ps-1">{% trans "Facturation" %}</span>
-                        </div>
-                    </a>
-                </li>
-
-                <!-- ============================================================ -->
-                <!-- ADMINISTRATION (superusers only) -->
-                <!-- ============================================================ -->
-                {% if user.is_superuser %}
-                <li class="nav-divider">{% trans "Administration" %}</li>
-
-                <li class="nav-item">
-                    <a class="nav-link dropdown-toggle {% if app_name in 'users organization' %}active{% endif %}"
-                        href="#" id="adminDropdown" data-bs-toggle="collapse" data-bs-target="#adminMenu"
-                        aria-expanded="{% if app_name in 'users organization' %}true{% else %}false{% endif %}"
-                        aria-controls="adminMenu">
-                        <div class="d-flex align-items-center">
-                            <span class="nav-link-icon"><span class="fas fa-cogs fs-1"></span></span>
-                            <span class="nav-link-text ps-1">{% trans "Administration" %}</span>
-                        </div>
-                    </a>
-                    <div id="adminMenu" class="collapse {% if app_name in 'users organization' %}show{% endif %}">
-                        <ul class="nav flex-column ms-3">
-                            <li class="nav-item">
-                                <a class="nav-link {% if app_name == 'users' %}active{% endif %}"
-                                    href="{% url 'users:user_list' %}">{% trans "Utilisateurs" %}</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="{% url 'users:user_add' %}">{% trans "Nouvel Utilisateur"
-                                    %}</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link {% if app_name == 'organization' %}active{% endif %}"
-                                    href="{% url 'organization:organization_list' %}">{% trans "Organisations" %}</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="{% url 'admin:index' %}">{% trans "Admin Django" %}</a>
-                            </li>
-                        </ul>
-                    </div>
-                </li>
-                {% endif %}
 
                 <!-- ============================================================ -->
                 <!-- SYSTEM -->
@@ -330,14 +99,39 @@
                 <li class="nav-divider">{% trans "Système" %}</li>
 
                 <li class="nav-item">
-                    <a class="nav-link {% if url_name == 'profile' %}active{% endif %}" href="{% url 'users:profile' %}"
-                        role="button">
+                    <a class="nav-link {% if app_name == 'sync' %}active{% endif %}"
+                        href="{% url 'sync:sync_status' %}" role="button">
                         <div class="d-flex align-items-center">
-                            <span class="nav-link-icon"><span class="fas fa-user-circle fs-1"></span></span>
-                            <span class="nav-link-text ps-1">{% trans "Mon Profil" %}</span>
+                            <span class="nav-link-icon"><span class="fas fa-sync fs-1"></span></span>
+                            <span class="nav-link-text ps-1">{% trans "Synchronisation" %}</span>
                         </div>
                     </a>
                 </li>
+
+                {% if user.is_superuser %}
+                <li class="nav-item">
+                    <a class="nav-link dropdown-toggle {% if app_name == 'users' %}active{% endif %}"
+                        href="#" id="adminDropdown" data-bs-toggle="collapse" data-bs-target="#adminMenu"
+                        aria-expanded="{% if app_name == 'users' %}true{% else %}false{% endif %}"
+                        aria-controls="adminMenu">
+                        <div class="d-flex align-items-center">
+                            <span class="nav-link-icon"><span class="fas fa-user-shield fs-1"></span></span>
+                            <span class="nav-link-text ps-1">{% trans "Utilisateurs" %}</span>
+                        </div>
+                    </a>
+                    <div id="adminMenu" class="collapse {% if app_name == 'users' %}show{% endif %}">
+                        <ul class="nav flex-column ms-3">
+                            <li class="nav-item">
+                                <a class="nav-link {% if url_name == 'user_list' %}active{% endif %}"
+                                    href="{% url 'users:user_list' %}">{% trans "Liste" %}</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{% url 'admin:index' %}">{% trans "Django Admin" %}</a>
+                            </li>
+                        </ul>
+                    </div>
+                </li>
+                {% endif %}
 
                 <li class="nav-item">
                     <a class="nav-link" href="{% url 'account_logout' %}" role="button">

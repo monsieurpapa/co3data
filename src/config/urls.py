@@ -20,19 +20,18 @@ from config.views import (
     error_page_500,
 )
 
+from django.views.generic import RedirectView
+
 urlpatterns = [
+    path('', RedirectView.as_view(pattern_name='analytics:dashboard', permanent=False)),
     path('admin/', admin.site.urls),
     path('accounts/', include('allauth.urls')),
     path('i18n/', include('django.conf.urls.i18n')),
-    path('budget/', include(('budget.urls', 'budget'), namespace='budget')),
-    path('reporting/', include(('reporting.urls', 'reporting'), namespace='reporting')),
     path('users/', include(('users.urls', 'users'), namespace='users')),
-    path('organization/', include(('organization.urls', 'organization'), namespace='organization')),
-    path('cashflow/', include(('cashflow.urls', 'cashflow'), namespace='cashflow')),
-    path('assets/', include(('assets.urls', 'assets'), namespace='assets')),
-    path('inventory/', include(('inventory.urls', 'inventory'), namespace='inventory')),
-    path('invoicing/', include(('invoicing.urls', 'invoicing'), namespace='invoicing')),
-    path('', include(('accounting.urls', 'accounting'), namespace='accounting')),
+    path('cooperatives/', include(('cooperatives.urls', 'cooperatives'), namespace='cooperatives')),
+    path('analytics/', include(('analytics.urls', 'analytics'), namespace='analytics')),
+    path('questionnaires/', include(('questionnaires.urls', 'questionnaires'), namespace='questionnaires')),
+    path('sync/', include(('sync.urls', 'sync'), namespace='sync')),
 
     # Error page URLs (for testing and direct access; handlers used when errors occur)
     path('error/404/', error_page_404),
