@@ -121,15 +121,13 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% for farm in member.farms.all %}
-                                {% for record in farm.production_records.all %}
+                            {% for record in production_records %}
                                 <tr>
-                                    <td>{{ farm.farm_name|default:"Main Farm" }}</td>
+                                    <td>{{ record.farm.farm_name|default:"Main Farm" }}</td>
                                     <td>{{ record.get_crop_type_display }}</td>
                                     <td>{{ record.harvest_date|date:"d/m/Y" }}</td>
                                     <td class="text-end fw-bold">{{ record.quantity_kg }}</td>
                                 </tr>
-                                {% endfor %}
                             {% empty %}
                                 <tr>
                                     <td colspan="4" class="text-center py-4">{% trans "Aucune donnée de production trouvée." %}</td>
@@ -139,6 +137,31 @@
                     </table>
                 </div>
             </div>
+            {% if production_records.has_other_pages %}
+            <div class="card-footer bg-light d-flex justify-content-center">
+                <ul class="pagination pagination-sm mb-0">
+                    {% if production_records.has_previous %}
+                    <li class="page-item"><a class="page-link" href="?page={{ production_records.previous_page_number }}">&laquo;</a></li>
+                    {% else %}
+                    <li class="page-item disabled"><span class="page-link">&laquo;</span></li>
+                    {% endif %}
+                    
+                    {% for i in production_records.paginator.page_range %}
+                        {% if production_records.number == i %}
+                        <li class="page-item active"><span class="page-link">{{ i }}</span></li>
+                        {% else %}
+                        <li class="page-item"><a class="page-link" href="?page={{ i }}">{{ i }}</a></li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if production_records.has_next %}
+                    <li class="page-item"><a class="page-link" href="?page={{ production_records.next_page_number }}">&raquo;</a></li>
+                    {% else %}
+                    <li class="page-item disabled"><span class="page-link">&raquo;</span></li>
+                    {% endif %}
+                </ul>
+            </div>
+            {% endif %}
         </div>
     </div>
 </div>

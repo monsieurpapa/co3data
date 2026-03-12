@@ -10,6 +10,7 @@ Handlers use referrer for "Go back" navigation. Test URLs: /error/403/, /error/4
 """
 from django.contrib import admin
 from django.urls import path, include
+from django.http import JsonResponse
 
 from config.views import (
     custom_permission_denied,
@@ -22,7 +23,11 @@ from config.views import (
 
 from django.views.generic import RedirectView
 
+def health_check(request):
+    return JsonResponse({"status": "ok"}, status=200)
+
 urlpatterns = [
+    path('health/', health_check, name='health_check'),
     path('', RedirectView.as_view(pattern_name='analytics:dashboard', permanent=False)),
     path('admin/', admin.site.urls),
     path('accounts/', include('allauth.urls')),

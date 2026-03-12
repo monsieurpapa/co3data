@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block content %}
+<div class="container mt-4">
+  <h2 class="mb-3">
+    {% trans "Détail de la livraison de cerises" %}
+  </h2>
+
+  <dl class="row">
+    <dt class="col-sm-3">{% trans "Station" %}</dt>
+    <dd class="col-sm-9">{{ delivery.station }}</dd>
+
+    <dt class="col-sm-3">{% trans "Fermier" %}</dt>
+    <dd class="col-sm-9">
+      {% if delivery.member.farmer_code %}
+        {{ delivery.member.farmer_code }} – {{ delivery.member.first_name }} {{ delivery.member.last_name }}
+      {% else %}
+        {{ delivery.member }}
+      {% endif %}
+    </dd>
+
+    <dt class="col-sm-3">{% trans "Date d'achat" %}</dt>
+    <dd class="col-sm-9">{{ delivery.purchase_date|date:"Y-m-d" }}</dd>
+
+    <dt class="col-sm-3">{% trans "Quantité (kg)" %}</dt>
+    <dd class="col-sm-9">{{ delivery.quantity_kg }}</dd>
+
+    <dt class="col-sm-3">{% trans "Prix unitaire (FC)" %}</dt>
+    <dd class="col-sm-9">{{ delivery.base_price_fc }}</dd>
+
+    <dt class="col-sm-3">{% trans "Prix total (FC)" %}</dt>
+    <dd class="col-sm-9">{{ delivery.total_price_fc }}</dd>
+
+    <dt class="col-sm-3">{% trans "Taux de change FC/USD" %}</dt>
+    <dd class="col-sm-9">{{ delivery.exchange_rate_fc_usd }}</dd>
+
+    <dt class="col-sm-3">{% trans "N° du reçu" %}</dt>
+    <dd class="col-sm-9">{{ delivery.receipt_number }}</dd>
+
+    <dt class="col-sm-3">{% trans "N° registre de cerises" %}</dt>
+    <dd class="col-sm-9">{{ delivery.cherry_register_number }}</dd>
+
+    <dt class="col-sm-3">{% trans "N° rapport de livraison" %}</dt>
+    <dd class="col-sm-9">{{ delivery.delivery_report_number }}</dd>
+
+    <dt class="col-sm-3">{% trans "Statut de synchronisation" %}</dt>
+    <dd class="col-sm-9">
+      {% if delivery.is_locally_created %}
+        <span class="badge bg-warning text-dark">● {% trans "En attente" %}</span>
+      {% else %}
+        <span class="badge bg-success">● {% trans "Synchronisé" %}</span>
+      {% endif %}
+    </dd>
+  </dl>
+
+  <a href="{% url 'cooperatives:cherry_delivery_list' %}" class="btn btn-outline-secondary">
+    {% trans "Retour à la liste" %}
+  </a>
+</div>
+{% endblock %}
+

@@ -1,3 +1,6 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
 {% block breadcrumb %}
     <li class="breadcrumb-item"><a href="{% url 'analytics:dashboard' %}">{% trans "Accueil" %}</a></li>
     <li class="breadcrumb-item active" aria-current="page">{% trans "Questionnaires" %}</li>
@@ -46,7 +49,12 @@
                             {% endif %}
                         </td>
                         <td class="align-middle text-end">
-                            <a href="{% url 'questionnaires:questionnaire_detail' q.pk %}" class="btn btn-link p-0" title="View"><span class="fas fa-eye"></span></a>
+                            <a href="{% url 'questionnaires:questionnaire_detail' q.pk %}" class="btn btn-link p-0" title="{% trans 'Voir' %}"><span class="fas fa-eye"></span></a>
+                            {% if user.is_superuser %}
+                            <a href="{% url 'admin:questionnaires_questionnaire_change' q.pk %}" class="btn btn-link p-0 ms-2" title="{% trans 'Modifier (admin)' %}">
+                                <span class="fas fa-edit"></span>
+                            </a>
+                            {% endif %}
                         </td>
                     </tr>
                     {% empty %}

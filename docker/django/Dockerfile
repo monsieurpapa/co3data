@@ -4,33 +4,31 @@
 FROM python:3.11-slim-bullseye
 
 # Set environment variables
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    # uv: don't try to create a venv, install directly into system Python
+    UV_SYSTEM_PYTHON=1 \
+    UV_NO_CACHE=1
 
 # Set work directory
 WORKDIR /app
 
-# Install system dependencies
-# libpq-dev is needed for psycopg2
-# build-essential might be needed for some packages
+# Install system dependencies + uv in a single layer
 RUN apt-get update && \
     apt-get install -y --no-install-recommends build-essential libpq-dev curl && \
     apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+    rm -rf /var/lib/apt/lists/* && \
+    # Install uv from official binary – much faster than pip for large dep trees
+    curl -LsSf https://astral.sh/uv/install.sh | sh && \
+    ln -s /root/.local/bin/uv /usr/local/bin/uv
 
-# Install Python dependencies
-# Copy requirements first to leverage Docker cache
+# Install Python dependencies with uv
+# Copy requirements first to leverage Docker layer cache
 COPY ./requirements.txt /app/requirements.txt
-RUN pip install --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+RUN uv pip install -r requirements.txt
 
 # Copy project source code
-# Ensure .dockerignore is set up correctly in the project root if needed
 COPY ./src /app/
-
-# Copy entrypoint script (optional but recommended)
-# COPY ./docker/django/entrypoint.sh /entrypoint.sh
-# RUN chmod +x /entrypoint.sh
 
 # Collect static files (optional - can be done in entrypoint or manually)
 # RUN python manage.py collectstatic --noinput
@@ -38,9 +36,5 @@ COPY ./src /app/
 # Expose port Gunicorn will run on
 EXPOSE 8000
 
-# Define default command to run Gunicorn
-# Replace 'config.wsgi:application' with your actual WSGI application path
-# Consider using an entrypoint script to run migrations first
-# ENTRYPOINT ["/entrypoint.sh"]
+# Run Gunicorn
 CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000"]
-

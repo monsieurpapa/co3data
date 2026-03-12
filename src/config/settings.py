@@ -44,13 +44,17 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 
     # Third-party apps
-        'django.contrib.sites',  # Required by allauth
+    'django.contrib.sites',  # Required by allauth
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
     'allauth.socialaccount.providers.google',
 
     'django_celery_beat',
+
+    # Cloudinary storage
+    'cloudinary',
+    'cloudinary_storage',
 
     # Local apps
     'core',
@@ -165,6 +169,19 @@ STATIC_ROOT = BASE_DIR / 'static'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+# Cloudinary configuration (object storage for uploaded files)
+CLOUDINARY_URL = env('CLOUDINARY_URL', default=None)
+
+if CLOUDINARY_URL:
+    DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+
+    CLOUDINARY_STORAGE = {
+        'CLOUD_NAME': env('CLOUDINARY_CLOUD_NAME', default=None),
+        'API_KEY': env('CLOUDINARY_API_KEY', default=None),
+        'API_SECRET': env('CLOUDINARY_API_SECRET', default=None),
+        'SECURE': True,
+    }
 
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'

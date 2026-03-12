@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block content %}
+<div class="container mt-4">
+  <h2 class="mb-3">{% trans "Nouvelle livraison de cerises" %}</h2>
+
+  <form method="post" novalidate>
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+      <div class="alert alert-danger">
+        {{ form.non_field_errors }}
+      </div>
+    {% endif %}
+
+    <div class="row">
+      <div class="col-md-6 mb-3">
+        {{ form.station.label_tag }}
+        {{ form.station }}
+        {{ form.station.errors }}
+      </div>
+      <div class="col-md-6 mb-3">
+        {{ form.member.label_tag }}
+        {{ form.member }}
+        {{ form.member.errors }}
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-md-4 mb-3">
+        {{ form.purchase_date.label_tag }}
+        {{ form.purchase_date }}
+        {{ form.purchase_date.errors }}
+      </div>
+      <div class="col-md-4 mb-3">
+        {{ form.reception_date.label_tag }}
+        {{ form.reception_date }}
+        {{ form.reception_date.errors }}
+      </div>
+      <div class="col-md-4 mb-3">
+        {{ form.quantity_kg.label_tag }}
+        {{ form.quantity_kg }}
+        {{ form.quantity_kg.errors }}
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-md-4 mb-3">
+        {{ form.receipt_number.label_tag }}
+        {{ form.receipt_number }}
+        {{ form.receipt_number.errors }}
+      </div>
+      <div class="col-md-4 mb-3">
+        {{ form.base_price_fc.label_tag }}
+        {{ form.base_price_fc }}
+        {{ form.base_price_fc.errors }}
+      </div>
+      <div class="col-md-4 mb-3">
+        {{ form.total_price_fc.label_tag }}
+        {{ form.total_price_fc }}
+        {{ form.total_price_fc.errors }}
+        <small class="form-text text-muted">
+          {% trans "Sera recalculé automatiquement en fonction de la quantité et du prix unitaire." %}
+        </small>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-md-4 mb-3">
+        {{ form.exchange_rate_fc_usd.label_tag }}
+        {{ form.exchange_rate_fc_usd }}
+        {{ form.exchange_rate_fc_usd.errors }}
+      </div>
+      <div class="col-md-4 mb-3">
+        {{ form.cherry_register_number.label_tag }}
+        {{ form.cherry_register_number }}
+        {{ form.cherry_register_number.errors }}
+      </div>
+      <div class="col-md-4 mb-3">
+        {{ form.delivery_report_number.label_tag }}
+        {{ form.delivery_report_number }}
+        {{ form.delivery_report_number.errors }}
+      </div>
+    </div>
+
+    <button type="submit" class="btn btn-primary">
+      {% trans "Enregistrer la livraison" %}
+    </button>
+  </form>
+</div>
+{% endblock %}
+

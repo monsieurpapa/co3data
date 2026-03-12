@@ -1,9 +1,13 @@
 from django.views.generic import TemplateView
 from django.contrib.auth.mixins import LoginRequiredMixin
+from core.mixins import RoleRequiredMixin
 from .models import Device, PendingChange
 
-class SyncStatusView(LoginRequiredMixin, TemplateView):
+
+class SyncStatusView(LoginRequiredMixin, RoleRequiredMixin, TemplateView):
     template_name = 'sync/sync_status.html'
+
+    required_roles = ["manager", "regional_officer", "admin"]
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

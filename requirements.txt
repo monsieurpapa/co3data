@@ -14,3 +14,6 @@ requests
 cryptography
 django-crispy-forms~=2.0
 crispy-bootstrap5~=0.7
+simpleeval~=1.0
+cloudinary~=1.40
+django-cloudinary-storage~=0.3

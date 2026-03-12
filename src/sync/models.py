@@ -2,6 +2,8 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
+import uuid
+
 
 class Device(models.Model):
     device_id = models.CharField(max_length=255, unique=True, help_text=_("Unique identifier for the mobile device"))
@@ -16,6 +18,7 @@ class Device(models.Model):
 
     def __str__(self):
         return f"Device {self.device_id} for {self.user.username}"
+
 
 class PendingChange(models.Model):
     CHANGE_TYPE_CHOICES = (
@@ -32,6 +35,7 @@ class PendingChange(models.Model):
     timestamp = models.DateTimeField(auto_now_add=True)
     is_synced = models.BooleanField(default=False)
     attempts = models.PositiveIntegerField(default=0)
+    local_uuid = models.UUIDField(default=uuid.uuid4, editable=False, db_index=True, null=True, blank=True)
 
     class Meta:
         verbose_name = _("Pending Change")
@@ -41,7 +45,20 @@ class PendingChange(models.Model):
     def __str__(self):
         return f"{self.change_type} from {self.device}"
 
+
 class SyncLog(models.Model):
+    CONFLICT_STRATEGY_LAST_WRITE = "last_write_wins"
+    CONFLICT_STRATEGY_SERVER = "server_wins"
+    CONFLICT_STRATEGY_CLIENT = "client_wins"
+    CONFLICT_STRATEGY_MANUAL = "manual"
+
+    CONFLICT_STRATEGY_CHOICES = (
+        (CONFLICT_STRATEGY_LAST_WRITE, _("Last write wins")),
+        (CONFLICT_STRATEGY_SERVER, _("Server wins")),
+        (CONFLICT_STRATEGY_CLIENT, _("Client wins")),
+        (CONFLICT_STRATEGY_MANUAL, _("Manual resolution")),
+    )
+
     device = models.ForeignKey(Device, on_delete=models.CASCADE, related_name="sync_logs")
     sync_start_time = models.DateTimeField(auto_now_add=True)
     sync_end_time = models.DateTimeField(blank=True, null=True)
@@ -49,6 +66,7 @@ class SyncLog(models.Model):
     message = models.TextField(blank=True, null=True)
     changes_uploaded = models.PositiveIntegerField(default=0)
     changes_downloaded = models.PositiveIntegerField(default=0)
+    conflict_strategy = models.CharField(max_length=32, choices=CONFLICT_STRATEGY_CHOICES, blank=True, null=True)
 
     class Meta:
         verbose_name = _("Synchronization Log")

@@ -1,38 +1,31 @@
 from django.db.models import Avg, Sum, Count
 from cooperatives.models import ProductionRecord, Member, Farm
 from .models import KPI, DataValidationRule, DataQualityAlert
+from simpleeval import simple_eval
 
 class KPIService:
     """Service for calculating Key Performance Indicators."""
 
     @staticmethod
-    def calculate_yield_per_hectare(cooperative):
-        """Calculates average yield (kg) per hectare for a cooperative."""
-        total_quantity = ProductionRecord.objects.filter(
-            farm__member__cooperative=cooperative
-        ).aggregate(total=Sum('quantity_kg'))['total'] or 0
-        
-        total_size = Farm.objects.filter(
-            member__cooperative=cooperative
-        ).aggregate(total=Sum('size_hectares'))['total'] or 0
-        
-        if total_size > 0:
-            return total_quantity / total_size
-        return 0
+    def get_cooperatives_with_youth_data(queryset):
+        """Returns cooperative queryset annotated with total_members and youth_members counts."""
+        from django.db.models import Count, Q
+        return queryset.annotate(
+            total_members_count=Count('members', distinct=True),
+            youth_members_count=Count('members', filter=Q(members__age_group='youth'), distinct=True)
+        )
 
     @staticmethod
-    def calculate_youth_participation(cooperative):
-        """Calculates percentage of youth members (18-35) in a cooperative."""
-        total_members = Member.objects.filter(cooperative=cooperative).count()
-        if total_members == 0:
-            return 0
-        
-        youth_count = Member.objects.filter(
-            cooperative=cooperative, 
-            age_group='youth'
-        ).count()
-        
-        return (youth_count / total_members) * 100
+    def get_cooperatives_with_yield_data(queryset):
+        """Returns cooperative queryset annotated with total yield and total farm size."""
+        # This requires careful aggregation to avoid cartesian products if members have multiple farms/records
+        # For a clean dashboard summary, it is often better to calculate global averages or annotate carefully.
+        # Here we annotate total production and total farm size linked to the cooperative.
+        from django.db.models import Sum
+        return queryset.annotate(
+            total_production_kg=Sum('members__farms__production_records__quantity_kg', distinct=True),
+            total_farm_size_ha=Sum('members__farms__size_hectares', distinct=True)
+        )
 
 class ValidationService:
     """Service for executing dynamic data validation rules."""
@@ -59,7 +52,15 @@ class ValidationService:
                 }
                 
                 # If validation fails
-                if not eval(rule.rule_expression, {"__builtins__": {}}, context):
+                try:
+                    is_valid = simple_eval(rule.rule_expression, names=context)
+                except Exception as eval_err:
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.error(f"Rule '{rule.name}' evaluation error: {eval_err}")
+                    is_valid = False
+
+                if not is_valid:
                     # Check for existing unresolved alert for this record/rule
                     alert, created = DataQualityAlert.objects.get_or_create(
                         rule=rule,
@@ -116,7 +117,15 @@ class ValidationService:
                     'answers': answers,
                 }
                 
-                if not eval(rule.rule_expression, {"__builtins__": {}}, context):
+                try:
+                    is_valid = simple_eval(rule.rule_expression, names=context)
+                except Exception as eval_err:
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.error(f"Questionnaire Rule '{rule.name}' evaluation error: {eval_err}")
+                    is_valid = False
+
+                if not is_valid:
                     DataQualityAlert.objects.get_or_create(
                         rule=rule,
                         cooperative=cooperative,

@@ -37,24 +37,29 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         context['total_members'] = members.count()
         context['total_submissions'] = submissions.count()
         
-        # Youth participation & Yield
+        # Youth participation
         youth_counts = []
-        total_yield = 0
-        coops_with_yield = 0
-        
-        for coop in cooperatives:
-            # Youth
-            youth_participation = KPIService.calculate_youth_participation(coop)
+        annotated_youth = KPIService.get_cooperatives_with_youth_data(cooperatives)
+        for coop in annotated_youth:
+            pct = (coop.youth_members_count / coop.total_members_count * 100) if coop.total_members_count > 0 else 0
             youth_counts.append({
                 'coop_name': coop.name,
-                'youth_participation': round(youth_participation, 2)
+                'youth_participation': round(pct, 2)
             })
             
-            # Yield
-            coop_yield = KPIService.calculate_yield_per_hectare(coop)
-            if coop_yield > 0:
-                total_yield += coop_yield
-                coops_with_yield += 1
+        # Yield Calculation
+        total_yield = 0
+        coops_with_yield = 0
+        annotated_yield = KPIService.get_cooperatives_with_yield_data(cooperatives)
+        
+        for coop in annotated_yield:
+            if coop.total_farm_size_ha and coop.total_farm_size_ha > 0:
+                prod = coop.total_production_kg or 0
+                coop_yield = float(prod) / float(coop.total_farm_size_ha)
+                
+                if coop_yield > 0:
+                    total_yield += coop_yield
+                    coops_with_yield += 1
                   
         context['youth_counts'] = youth_counts
         context['avg_yield'] = round(total_yield / coops_with_yield, 2) if coops_with_yield > 0 else 0
