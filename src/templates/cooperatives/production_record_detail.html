@@ -1,0 +1,158 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{{ object.farm.farm_name }} - {% trans "Production" %} | CO3DATA{% endblock %}
+
+{% block breadcrumb %}
+    <li class="breadcrumb-item"><a href="{% url 'analytics:dashboard' %}">{% trans "Accueil" %}</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'cooperatives:production_record_list' %}">{% trans "Productions" %}</a></li>
+    <li class="breadcrumb-item active" aria-current="page">{{ object.farm.farm_name }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card mb-3">
+            <div class="card-header bg-light">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">{% trans "Détails de Production" %}</h5>
+                    <div>
+                        {% if user.profile.role.name in 'admin,manager,agronomist' or user.is_superuser %}
+                        <a href="{% url 'cooperatives:production_record_edit' object.unique_id %}" class="btn btn-falcon-primary btn-sm">
+                            <span class="fas fa-edit me-1"></span>{% trans "Modifier" %}
+                        </a>
+                        {% endif %}
+                        {% if user.profile.role.name in 'admin,manager' or user.is_superuser %}
+                        <a href="{% url 'cooperatives:production_record_delete' object.unique_id %}" class="btn btn-danger btn-sm">
+                            <span class="fas fa-trash me-1"></span>{% trans "Supprimer" %}
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row gx-3">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">{% trans "Exploitation" %}</label>
+                        <p class="form-control-plaintext fw-semi-bold">{{ object.farm.farm_name }}</p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">{% trans "Membre" %}</label>
+                        <p class="form-control-plaintext">
+                            <a href="{% url 'cooperatives:member_detail' object.farm.member.unique_id %}">
+                                {{ object.farm.member.first_name }} {{ object.farm.member.last_name }}
+                            </a>
+                        </p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">{% trans "Type de Culture" %}</label>
+                        <p class="form-control-plaintext"><span class="badge badge-soft-info">{{ object.get_crop_type_display }}</span></p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">{% trans "Date de Récolte" %}</label>
+                        <p class="form-control-plaintext">{{ object.harvest_date|date:"d/m/Y" }}</p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">{% trans "Quantité (kg)" %}</label>
+                        <p class="form-control-plaintext fw-semi-bold">{{ object.quantity_kg }}</p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">{% trans "Grade de Qualité" %}</label>
+                        <p class="form-control-plaintext">
+                            <span class="badge badge-soft-{% if object.quality_grade == 'A' %}success{% elif object.quality_grade == 'B' %}warning{% else %}danger{% endif %}">
+                                {{ object.get_quality_grade_display }}
+                            </span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Questionnaires Section -->
+        <div class="card">
+            <div class="card-header bg-light">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">{% trans "Questionnaires Associés" %}</h5>
+                    {% if user.profile.role.name in 'admin,regional_officer,manager' or user.is_superuser %}
+                    <a href="{% url 'questionnaires:submit_questionnaire' %}?target_model=production&target_id={{ object.unique_id }}" class="btn btn-falcon-primary btn-sm">
+                        <span class="fas fa-plus me-1"></span>{% trans "Nouveau Questionnaire" %}
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="card-body">
+                {% if submissions %}
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0">
+                        <thead class="bg-200">
+                            <tr>
+                                <th>{% trans "Questionnaire" %}</th>
+                                <th>{% trans "Date" %}</th>
+                                <th>{% trans "État" %}</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for submission in submissions %}
+                            <tr>
+                                <td>{{ submission.questionnaire.title }}</td>
+                                <td>{{ submission.submitted_at|date:"d/m/Y H:i" }}</td>
+                                <td><span class="badge badge-soft-success">{% trans "Soumis" %}</span></td>
+                                <td class="text-end">
+                                    <a href="{% url 'questionnaires:submission_detail' submission.unique_id %}" class="btn btn-link btn-sm">
+                                        <span class="fas fa-eye"></span>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted mb-0">{% trans "Aucun questionnaire associé." %}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Side Panel -->
+    <div class="col-lg-4">
+        <div class="card mb-3">
+            <div class="card-header bg-light">
+                <h6 class="mb-0">{% trans "Informations Supplémentaires" %}</h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <small class="text-muted">{% trans "Enregistrement créé" %}</small>
+                    <p class="mb-0">{{ object.created_at|date:"d/m/Y H:i" }}</p>
+                </div>
+                <div class="mb-3">
+                    <small class="text-muted">{% trans "Dernière modification" %}</small>
+                    <p class="mb-0">{{ object.updated_at|date:"d/m/Y H:i" }}</p>
+                </div>
+                {% if object.notes %}
+                <div>
+                    <small class="text-muted">{% trans "Notes" %}</small>
+                    <p class="mb-0 small">{{ object.notes }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Cooperative Card -->
+        <div class="card">
+            <div class="card-header bg-light">
+                <h6 class="mb-0">{% trans "Coopérative" %}</h6>
+            </div>
+            <div class="card-body">
+                <p class="mb-2">
+                    <a href="{% url 'cooperatives:cooperative_detail' object.farm.member.cooperative.unique_id %}">
+                        <strong>{{ object.farm.member.cooperative.name }}</strong>
+                    </a>
+                </p>
+                <small class="text-muted">{{ object.farm.member.cooperative.region_name }}</small>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

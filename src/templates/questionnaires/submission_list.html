@@ -10,8 +10,11 @@
 
 {% block content %}
 <div class="card mb-3">
-    <div class="card-header bg-light">
+    <div class="card-header bg-light d-flex justify-content-between align-items-center">
         <h5 class="mb-0">{% trans "Historique des Soumissions" %}</h5>
+        <a href="{% url 'questionnaires:questionnaire_list' %}" class="btn btn-falcon-default btn-sm">
+            <span class="fas fa-arrow-left me-1"></span>{% trans "Retour aux Questionnaires" %}
+        </a>
     </div>
     <div class="card-body p-0">
         <div class="table-responsive scrollbar">
@@ -29,15 +32,24 @@
                     {% for submission in submissions %}
                     <tr>
                         <td class="align-middle fw-semi-bold">
-                            <a href="{% url 'questionnaires:submission_detail' submission.pk %}">{{ submission.questionnaire.title }}</a>
+                            <span class="badge badge-soft-primary">{{ submission.questionnaire.title }}</span>
                         </td>
                         <td class="align-middle">{{ submission.content_object }}</td>
                         <td class="align-middle">{{ submission.submitted_by.get_full_name }}</td>
                         <td class="align-middle">{{ submission.submitted_at|date:"d/m/Y H:i" }}</td>
                         <td class="align-middle text-end">
-                            <a href="{% url 'questionnaires:submission_detail' submission.pk %}" class="btn btn-link p-0" title="{% trans 'Voir les réponses' %}">
-                                <span class="fas fa-eye text-primary"></span>
-                            </a>
+                            <div class="dropdown font-sans-serif">
+                                <button class="btn btn-link text-600 btn-sm dropdown-toggle" type="button" id="dropdown-{{ submission.unique_id }}" data-bs-toggle="dropdown" data-boundary="viewport" aria-haspopup="true" aria-expanded="false">
+                                    <span class="fas fa-ellipsis-h fs--1"></span>
+                                </button>
+                                <div class="dropdown-menu dropdown-menu-end border py-0" aria-labelledby="dropdown-{{ submission.unique_id }}">
+                                    <div class="bg-white py-2">
+                                        <a class="dropdown-item" href="{% url 'questionnaires:submission_detail' submission.unique_id %}">
+                                            <span class="fas fa-eye me-2 text-primary"></span>{% trans "Voir les réponses" %}
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
                         </td>
                     </tr>
                     {% empty %}

@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Certificats" %} | CO3DATA{% endblock %}
+
+{% block breadcrumb %}
+    <li class="breadcrumb-item"><a href="{% url 'analytics:dashboard' %}">{% trans "Accueil" %}</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'cooperatives:cooperative_detail' cooperative.unique_id %}">{{ cooperative.name }}</a></li>
+    <li class="breadcrumb-item active" aria-current="page">{% trans "Certificats" %}</li>
+{% endblock %}
+
+{% block content %}
+<div class="card mb-3">
+    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+        <div>
+            <h5 class="mb-0">{% trans "Certificats" %}</h5>
+            <small class="text-600">{{ cooperative.name }}</small>
+        </div>
+        {% if user.profile.role.name in 'admin,regional_officer,manager' or user.is_superuser %}
+        <a href="{% url 'cooperatives:cooperative_certificate_add' cooperative.unique_id %}" class="btn btn-falcon-primary btn-sm">
+            <span class="fas fa-plus me-1"></span>{% trans "Nouveau Certificat" %}
+        </a>
+        {% endif %}
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive scrollbar">
+            <table class="table table-sm table-striped fs--1 mb-0 overflow-hidden">
+                <thead class="bg-200 text-900">
+                    <tr>
+                        <th>{% trans "Nom" %}</th>
+                        <th>{% trans "Émetteur" %}</th>
+                        <th>{% trans "Date d'émission" %}</th>
+                        <th>{% trans "Expire" %}</th>
+                        <th>{% trans "Document" %}</th>
+                        <th class="text-end">{% trans "Actions" %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cert in certificates %}
+                    <tr>
+                        <td>{{ cert.name }}</td>
+                        <td>{{ cert.issuer|default:"-" }}</td>
+                        <td>{{ cert.issued_date|date:"d/m/Y"|default:"-" }}</td>
+                        <td>{{ cert.expires_date|date:"d/m/Y"|default:"-" }}</td>
+                        <td>
+                            {% if cert.document %}
+                            <a href="{{ cert.document.url }}" target="_blank" class="text-decoration-none">
+                                <span class="fas fa-file-pdf text-danger"></span> {% trans "Télécharger" %}
+                            </a>
+                            {% else %}
+                            -
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            <div class="dropdown font-sans-serif">
+                                <button class="btn btn-link text-600 btn-sm dropdown-toggle btn-reveal" type="button" id="dropdown-{{ cert.unique_id }}" data-bs-toggle="dropdown" data-boundary="viewport" aria-haspopup="true" aria-expanded="false">
+                                    <span class="fas fa-ellipsis-h fs--1"></span>
+                                </button>
+                                <div class="dropdown-menu dropdown-menu-end border py-0" aria-labelledby="dropdown-{{ cert.unique_id }}">
+                                    <div class="bg-white py-2">
+                                        <a class="dropdown-item" href="{% url 'cooperatives:cooperative_certificate_edit' cooperative.unique_id cert.unique_id %}">
+                                            <span class="fas fa-edit me-2 text-info"></span>{% trans "Modifier" %}
+                                        </a>
+                                        <div class="dropdown-divider"></div>
+                                        <a class="dropdown-item text-danger" href="{% url 'cooperatives:cooperative_certificate_delete' cooperative.unique_id cert.unique_id %}">
+                                            <span class="fas fa-trash me-2"></span>{% trans "Supprimer" %}
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center py-4">{% trans "Aucun certificat trouvé pour cette coopérative." %}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

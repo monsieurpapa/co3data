@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% load i18n crispy_forms_tags %}
+
+{% block breadcrumb %}
+    <li class="breadcrumb-item"><a href="{% url 'analytics:dashboard' %}">{% trans "Accueil" %}</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'cooperatives:cooperative_detail' cooperative.unique_id %}">{{ cooperative.name }}</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'cooperatives:cooperative_sale_list' cooperative.unique_id %}">{% trans "Ventes" %}</a></li>
+    <li class="breadcrumb-item active" aria-current="page">
+        {% if object %}{% trans "Modifier" %}{% else %}{% trans "Nouveau" %}{% endif %}
+    </li>
+{% endblock %}
+
+{% block content %}
+<div class="card mb-3">
+    <div class="card-header bg-light">
+        <div class="row align-items-center">
+            <div class="col">
+                <h5 class="mb-0">
+                    {% if object %}
+                        {% trans "Modifier la Vente" %}: {{ object.year }}
+                    {% else %}
+                        {% trans "Nouvelle Vente" %}
+                    {% endif %}
+                </h5>
+            </div>
+            <div class="col-auto">
+                <a href="{% url 'cooperatives:cooperative_sale_list' cooperative.unique_id %}" class="btn btn-falcon-default btn-sm">
+                    <span class="fas fa-times me-1"></span>{% trans "Annuler" %}
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <form method="post" novalidate>
+            {% csrf_token %}
+            <div class="row g-3">
+                <div class="col-md-6">{{ form.buyer|as_crispy_field }}</div>
+                <div class="col-md-6">{{ form.year|as_crispy_field }}</div>
+                <div class="col-md-6">{{ form.grade|as_crispy_field }}</div>
+                <div class="col-md-6">{{ form.destination_country|as_crispy_field }}</div>
+                <div class="col-md-6">{{ form.quantity_kg|as_crispy_field }}</div>
+                <div class="col-md-6">{{ form.price_per_kg|as_crispy_field }}</div>
+                <div class="col-md-6">{{ form.arrival_date|as_crispy_field }}</div>
+                <div class="col-12">{{ form.notes|as_crispy_field }}</div>
+            </div>
+
+            <div class="mt-4 text-end">
+                <button type="submit" class="btn btn-primary px-5">
+                    <span class="fas fa-save me-2"></span>
+                    {% if object %}{% trans "Enregistrer les modifications" %}{% else %}{% trans "Créer la Vente" %}{% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

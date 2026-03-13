@@ -1,0 +1,190 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{{ object.get_full_name }} | CO3DATA{% endblock %}
+
+{% block breadcrumb %}
+    <li class="breadcrumb-item"><a href="{% url 'analytics:dashboard' %}">{% trans "Accueil" %}</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'users:user_list' %}">{% trans "Utilisateurs" %}</a></li>
+    <li class="breadcrumb-item active" aria-current="page">{{ object.get_full_name }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card mb-3">
+            <div class="card-header bg-light">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <span class="fas fa-user me-2"></span>{{ object.get_full_name }}
+                    </h5>
+                    <div>
+                        {% if user.is_staff or user.is_superuser %}
+                        <a href="{% url 'users:user_edit' object.unique_id %}" class="btn btn-falcon-primary btn-sm">
+                            <span class="fas fa-edit me-1"></span>{% trans "Modifier" %}
+                        </a>
+                        {% endif %}
+                        {% if user.is_superuser and object.pk != user.pk %}
+                        <a href="{% url 'users:user_delete' object.unique_id %}" class="btn btn-danger btn-sm">
+                            <span class="fas fa-trash me-1"></span>{% trans "Supprimer" %}
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row gx-3">
+                    <!-- Personal Information -->
+                    <div class="col-12">
+                        <h6 class="mb-3">{% trans "Informations Personnelles" %}</h6>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">{% trans "Prénom" %}</label>
+                        <p class="form-control-plaintext fw-semi-bold">{{ object.first_name }}</p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">{% trans "Nom de Famille" %}</label>
+                        <p class="form-control-plaintext fw-semi-bold">{{ object.last_name }}</p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">{% trans "Adresse Email" %}</label>
+                        <p class="form-control-plaintext">{{ object.email }}</p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">{% trans "Téléphone" %}</label>
+                        <p class="form-control-plaintext">
+                            {% if object.profile.phone_number %}
+                                {{ object.profile.phone_number }}
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </p>
+                    </div>
+
+                    <!-- Access Control -->
+                    <div class="col-12 mt-3">
+                        <h6 class="mb-3">{% trans "Contrôle d'Accès" %}</h6>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">{% trans "Rôle" %}</label>
+                        <p class="form-control-plaintext">
+                            {% if object.profile.role %}
+                                <span class="badge badge-soft-info">{{ object.profile.role.name|title }}</span>
+                            {% else %}
+                                <span class="text-muted">{% trans "Non défini" %}</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">{% trans "Région" %}</label>
+                        <p class="form-control-plaintext">
+                            {% if object.profile.region %}
+                                {{ object.profile.region.name }}
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </p>
+                    </div>
+
+                    <!-- Account Status -->
+                    <div class="col-12 mt-3">
+                        <h6 class="mb-3">{% trans "Statut du Compte" %}</h6>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">{% trans "Statut" %}</label>
+                        <p class="form-control-plaintext">
+                            {% if object.is_active %}
+                                <span class="badge badge-soft-success">{% trans "Actif" %}</span>
+                            {% else %}
+                                <span class="badge badge-soft-danger">{% trans "Inactif" %}</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">{% trans "Administrateur" %}</label>
+                        <p class="form-control-plaintext">
+                            {% if object.is_staff %}
+                                <span class="badge badge-soft-danger">{% trans "Oui" %}</span>
+                            {% else %}
+                                <span class="badge badge-soft-secondary">{% trans "Non" %}</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Activity Log -->
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">{% trans "Historique d'Activité" %}</h5>
+            </div>
+            <div class="card-body">
+                <div class="row gx-3">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">{% trans "Compte Créé" %}</label>
+                        <p class="form-control-plaintext">{{ object.date_joined|date:"d/m/Y H:i" }}</p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">{% trans "Dernière Connexion" %}</label>
+                        <p class="form-control-plaintext">
+                            {% if object.last_login %}
+                                {{ object.last_login|date:"d/m/Y H:i" }}
+                            {% else %}
+                                <span class="text-muted">{% trans "Jamais connecté" %}</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Side Panel -->
+    <div class="col-lg-4">
+        <div class="card mb-3">
+            <div class="card-header bg-light">
+                <h6 class="mb-0">{% trans "Informations de Profil" %}</h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <small class="text-muted">{% trans "Identifiant" %}</small>
+                    <p class="mb-0 font-monospace">{{ object.username }}</p>
+                </div>
+                <div class="mb-3">
+                    <small class="text-muted">{% trans "ID Utilisateur" %}</small>
+                    <p class="mb-0 font-monospace">{{ object.unique_id }}</p>
+                </div>
+                {% if object.is_superuser %}
+                <div>
+                    <small class="text-muted">{% trans "Permissions" %}</small>
+                    <p class="mb-0"><span class="badge badge-soft-danger">{% trans "Superutilisateur" %}</span></p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="card">
+            <div class="card-header bg-light">
+                <h6 class="mb-0">{% trans "Actions Rapides" %}</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'admin:users_user_change' object.pk %}" class="btn btn-outline-primary btn-sm" target="_blank">
+                        <span class="fas fa-lock-open me-1"></span>{% trans "Admin Django" %}
+                    </a>
+                    {% if user.is_staff or user.is_superuser %}
+                    <a href="{% url 'users:user_edit' object.unique_id %}" class="btn btn-outline-primary btn-sm">
+                        <span class="fas fa-edit me-1"></span>{% trans "Modifier" %}
+                    </a>
+                    {% endif %}
+                    <a href="{% url 'users:user_list' %}" class="btn btn-outline-secondary btn-sm">
+                        <span class="fas fa-arrow-left me-1"></span>{% trans "Retour à la Liste" %}
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

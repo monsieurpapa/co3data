@@ -13,10 +13,16 @@ class Region(models.Model):
     def __str__(self):
         return self.name
 
+import uuid
+
 class User(AbstractUser):
     # Custom user model extending Django's AbstractUser
+    unique_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, db_index=True)
     USER_ROLES = (
         ('member', _('Cooperative Member')),
+        ('agronomist', _('Agronomist')),
+        ('supervisor', _('Agronomist Supervisor')),
+        ('station_chef', _('Washing Station Chef')),
         ('manager', _('Cooperative Manager')),
         ('regional_officer', _('Regional Officer')),
         ('apex_body', _('Apex Body Representative')),

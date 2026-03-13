@@ -3,7 +3,16 @@ from decimal import Decimal
 from django import forms
 from django.utils.translation import gettext_lazy as _
 
-from .models import Member, Cooperative, ProductionRecord, WashingStation
+from .models import (
+    Member,
+    Cooperative,
+    ProductionRecord,
+    FinancialRecord,
+    WashingStation,
+    Buyer,
+    CooperativeCertificate,
+    CooperativeSale,
+)
 
 
 class CooperativeForm(forms.ModelForm):
@@ -155,3 +164,153 @@ class CherryDeliveryForm(forms.ModelForm):
         if commit:
             instance.save()
         return instance
+
+
+class ProductionRecordForm(forms.ModelForm):
+    """Form for generic production records (coffee/cocoa harvests)"""
+    class Meta:
+        model = ProductionRecord
+        fields = [
+            "farm",
+            "crop_type",
+            "harvest_date",
+            "quantity_kg",
+            "quality_grade",
+        ]
+        widgets = {
+            "farm": forms.Select(attrs={"class": "form-select"}),
+            "crop_type": forms.Select(attrs={"class": "form-select"}),
+            "harvest_date": forms.DateInput(attrs={"class": "form-control", "type": "date"}),
+            "quantity_kg": forms.NumberInput(attrs={"class": "form-control", "step": "0.01"}),
+            "quality_grade": forms.TextInput(attrs={"class": "form-control"}),
+        }
+        labels = {
+            "farm": _("Exploitation"),
+            "crop_type": _("Type de culture"),
+            "harvest_date": _("Date de récolte"),
+            "quantity_kg": _("Quantité (kg)"),
+            "quality_grade": _("Grade de qualité"),
+        }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        quantity = cleaned_data.get("quantity_kg")
+        harvest_date = cleaned_data.get("harvest_date")
+        
+        if quantity is not None and quantity <= 0:
+            self.add_error("quantity_kg", _("La quantité doit être supérieure à zéro."))
+        
+        if harvest_date:
+            from django.utils import timezone
+            if harvest_date > timezone.now().date():
+                self.add_error("harvest_date", _("La date de récolte ne peut pas être dans le futur."))
+        
+        return cleaned_data
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        instance.record_type = ProductionRecord.RECORD_TYPE_GENERIC
+        if commit:
+            instance.save()
+        return instance
+
+
+class FinancialRecordForm(forms.ModelForm):
+    """Form for creating and editing financial records"""
+    class Meta:
+        model = FinancialRecord
+        fields = [
+            "cooperative",
+            "transaction_date",
+            "transaction_type",
+            "amount",
+            "description",
+        ]
+        widgets = {
+            "cooperative": forms.Select(attrs={"class": "form-select"}),
+            "transaction_date": forms.DateInput(attrs={"class": "form-control", "type": "date"}),
+            "transaction_type": forms.Select(attrs={"class": "form-select"}),
+            "amount": forms.NumberInput(attrs={"class": "form-control", "step": "0.01"}),
+            "description": forms.Textarea(attrs={"class": "form-control", "rows": 4}),
+        }
+        labels = {
+            "cooperative": _("Coopérative"),
+            "transaction_date": _("Date de transaction"),
+            "transaction_type": _("Type de transaction"),
+            "amount": _("Montant (FC)"),
+            "description": _("Description"),
+        }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        amount = cleaned_data.get("amount")
+        transaction_date = cleaned_data.get("transaction_date")
+        
+        if amount is not None and amount <= 0:
+            self.add_error("amount", _("Le montant doit être supérieur à zéro."))
+        
+        if transaction_date:
+            from django.utils import timezone
+            if transaction_date > timezone.now().date():
+                self.add_error("transaction_date", _("La date de transaction ne peut pas être dans le futur."))
+        
+        return cleaned_data
+
+
+class BuyerForm(forms.ModelForm):
+    class Meta:
+        model = Buyer
+        fields = ["name", "country", "email", "phone"]
+        widgets = {
+            "name": forms.TextInput(attrs={"class": "form-control"}),
+            "country": forms.TextInput(attrs={"class": "form-control"}),
+            "email": forms.EmailInput(attrs={"class": "form-control"}),
+            "phone": forms.TextInput(attrs={"class": "form-control"}),
+        }
+
+
+class CooperativeCertificateForm(forms.ModelForm):
+    class Meta:
+        model = CooperativeCertificate
+        fields = ["name", "issuer", "issued_date", "expires_date", "document", "notes"]
+        widgets = {
+            "name": forms.TextInput(attrs={"class": "form-control"}),
+            "issuer": forms.TextInput(attrs={"class": "form-control"}),
+            "issued_date": forms.DateInput(attrs={"class": "form-control", "type": "date"}),
+            "expires_date": forms.DateInput(attrs={"class": "form-control", "type": "date"}),
+            "document": forms.ClearableFileInput(attrs={"class": "form-control"}),
+            "notes": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
+        }
+
+
+class CooperativeSaleForm(forms.ModelForm):
+    class Meta:
+        model = CooperativeSale
+        fields = [
+            "buyer",
+            "year",
+            "grade",
+            "destination_country",
+            "quantity_kg",
+            "price_per_kg",
+            "arrival_date",
+            "notes",
+        ]
+        widgets = {
+            "buyer": forms.Select(attrs={"class": "form-select"}),
+            "year": forms.NumberInput(attrs={"class": "form-control", "min": 2000, "max": 2100}),
+            "grade": forms.TextInput(attrs={"class": "form-control"}),
+            "destination_country": forms.TextInput(attrs={"class": "form-control"}),
+            "quantity_kg": forms.NumberInput(attrs={"class": "form-control", "step": "0.01"}),
+            "price_per_kg": forms.NumberInput(attrs={"class": "form-control", "step": "0.01"}),
+            "arrival_date": forms.DateInput(attrs={"class": "form-control", "type": "date"}),
+            "notes": forms.Textarea(attrs={"class": "form-control", "rows": 2}),
+        }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        quantity = cleaned_data.get("quantity_kg")
+        if quantity is not None and quantity <= 0:
+            self.add_error("quantity_kg", _("La quantité doit être supérieure à zéro."))
+        return cleaned_data
+

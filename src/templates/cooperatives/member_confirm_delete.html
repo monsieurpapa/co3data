@@ -27,7 +27,7 @@
                 <div class="mt-4">
                     <form method="post">
                         {% csrf_token %}
-                        <a href="{% url 'cooperatives:member_detail' object.pk %}" class="btn btn-falcon-default me-2">
+                        <a href="{% url 'cooperatives:member_detail' object.unique_id %}" class="btn btn-falcon-default me-2">
                             {% trans "Annuler" %}
                         </a>
                         <button type="submit" class="btn btn-danger px-4">

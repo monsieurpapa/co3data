@@ -163,14 +163,13 @@
             </table>
         </div>
     </div>
-    </div>
 </div>
 
 <div class="card mb-3">
     <div class="card-header bg-light">
         <h5 class="mb-0">{% trans "Soumissions Récentes" %}</h5>
     </div>
-    <div class="card-body bg-light>
+    <div class="card-body bg-light">
         <div class="table-responsive scrollbar">
             <table class="table table-sm table-striped fs--1 mb-0 overflow-hidden">
                 <thead class="bg-200 text-900">
@@ -185,7 +184,7 @@
                     {% for submission in recent_submissions %}
                     <tr>
                         <td class="align-middle">
-                            <a href="{% url 'questionnaires:submission_detail' submission.pk %}" class="fw-semi-bold">{{ submission.questionnaire.title }}</a>
+                            <a href="{% url 'questionnaires:submission_detail' submission.unique_id %}" class="fw-semi-bold">{{ submission.questionnaire.title }}</a>
                         </td>
                         <td class="align-middle">{{ submission.content_object }}</td>
                         <td class="align-middle">{{ submission.submitted_by.get_full_name|default:submission.submitted_by.email }}</td>

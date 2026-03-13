@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Supprimer la Livraison" %} | CO3DATA{% endblock %}
+
+{% block breadcrumb %}
+    <li class="breadcrumb-item"><a href="{% url 'analytics:dashboard' %}">{% trans "Accueil" %}</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'cooperatives:cherry_delivery_list' %}">{% trans "Livraisons de Cerises" %}</a></li>
+    <li class="breadcrumb-item active" aria-current="page">{% trans "Suppression" %}</li>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-5">
+    <div class="col-md-6">
+        <div class="card shadow-soft text-center">
+            <div class="card-body p-5">
+                <div class="mb-4">
+                    <span class="fas fa-exclamation-triangle text-danger fs-5"></span>
+                </div>
+                <h3>{% trans "Confirmation de suppression" %}</h3>
+                <p class="text-700">
+                    {% blocktrans with date=object.purchase_date farmer=object.member.get_full_name %}
+                        Êtes-vous sûr de vouloir supprimer cette livraison du <strong>{{ date|date:"d/m/Y" }}</strong> 
+                        de <strong>{{ farmer }}</strong> ? Cette action ne peut pas être annulée.
+                    {% endblocktrans %}
+                </p>
+                <div class="mt-4">
+                    <form method="post">
+                        {% csrf_token %}
+                        <a href="{% url 'cooperatives:cherry_delivery_list' %}" class="btn btn-falcon-default me-2">
+                            {% trans "Annuler" %}
+                        </a>
+                        <button type="submit" class="btn btn-danger px-4">
+                            {% trans "Supprimer définitivement" %}
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

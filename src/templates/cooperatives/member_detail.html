@@ -1,7 +1,7 @@
 {% block breadcrumb %}
     <li class="breadcrumb-item"><a href="{% url 'analytics:dashboard' %}">{% trans "Accueil" %}</a></li>
     <li class="breadcrumb-item"><a href="{% url 'cooperatives:cooperative_list' %}">{% trans "Coopératives" %}</a></li>
-    <li class="breadcrumb-item"><a href="{% url 'cooperatives:cooperative_detail' member.cooperative.pk %}">{{ member.cooperative.name }}</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'cooperatives:cooperative_detail' member.cooperative.unique_id %}">{{ member.cooperative.name }}</a></li>
     <li class="breadcrumb-item active" aria-current="page">{{ member.first_name }} {{ member.last_name }}</li>
 {% endblock %}
 
@@ -15,16 +15,16 @@
                         <h5 class="mb-0">{% trans "Profil du Membre" %}: {{ member.first_name }} {{ member.last_name }}</h5>
                     </div>
                     <div class="col-auto">
-                        <a href="{% url 'cooperatives:cooperative_detail' member.cooperative.pk %}" class="btn btn-falcon-default btn-sm me-2">
+                        <a href="{% url 'cooperatives:cooperative_detail' member.cooperative.unique_id %}" class="btn btn-falcon-default btn-sm me-2">
                             <span class="fas fa-arrow-left me-1"></span>{% trans "Retour" %}
                         </a>
-                        {% if user.role in 'admin,regional_officer,manager' %}
-                        <a href="{% url 'cooperatives:member_edit' member.pk %}" class="btn btn-falcon-primary btn-sm">
+                        {% if user.profile.role.name in 'admin,regional_officer,manager' or user.is_superuser %}
+                        <a href="{% url 'cooperatives:member_edit' member.unique_id %}" class="btn btn-falcon-primary btn-sm">
                             <span class="fas fa-edit me-1"></span>{% trans "Modifier" %}
                         </a>
                         {% endif %}
-                        {% if user.role in 'admin,manager' %}
-                        <a href="{% url 'cooperatives:member_delete' member.pk %}" class="btn btn-falcon-danger btn-sm ms-2">
+                        {% if user.profile.role.name in 'admin,manager' or user.is_superuser %}
+                        <a href="{% url 'cooperatives:member_delete' member.unique_id %}" class="btn btn-falcon-danger btn-sm ms-2">
                             <span class="fas fa-trash-alt me-1"></span>{% trans "Supprimer" %}
                         </a>
                         {% endif %}
@@ -52,7 +52,7 @@
                         <div class="row g-3">
                             <div class="col-sm-6 border-start-sm border-200">
                                 <p class="mb-1 fw-bold text-700">{% trans "Coopérative" %}:</p>
-                                <p class="text-1000"><a href="{% url 'cooperatives:cooperative_detail' member.cooperative.pk %}">{{ member.cooperative.name }}</a></p>
+                                <p class="text-1000"><a href="{% url 'cooperatives:cooperative_detail' member.cooperative.unique_id %}">{{ member.cooperative.name }}</a></p>
                                 <p class="mb-1 fw-bold text-700">{% trans "Sexe" %}:</p>
                                 <p class="text-1000">{{ member.get_gender_display }}</p>
                             </div>
@@ -89,7 +89,7 @@
                                     <h6 class="mb-1">{{ q.title }}</h6>
                                     <p class="mb-0 fs--1 text-600">{{ q.description|truncatewords:10 }}</p>
                                 </div>
-                                <a href="{% url 'questionnaires:questionnaire_submit' q.pk %}?target_id={{ member.pk }}" class="btn btn-falcon-primary btn-sm">
+                                <a href="{% url 'questionnaires:questionnaire_submit' q.unique_id %}?target_id={{ member.unique_id }}" class="btn btn-falcon-primary btn-sm">
                                     <span class="fas fa-edit me-1"></span>{% trans "Répondre" %}
                                 </a>
                             </div>

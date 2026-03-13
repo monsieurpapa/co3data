@@ -1,34 +1,112 @@
 from django import forms
-from django.contrib.auth.models import User
-from django.contrib.auth.forms import UserChangeForm
+from django.contrib.auth.forms import UserCreationForm, UserChangeForm
+from django.utils.translation import gettext_lazy as _
 
-from .models import Role, UserProfile
-from organization.models import Organization
+from .models import User, Region
 
 
-class UserAdminForm(forms.ModelForm):
-    """Form used by admin views to create or edit users along with profile data."""
-    password = forms.CharField(widget=forms.PasswordInput, required=False,
-                               help_text="Leave blank to keep existing password.")
-    role = forms.ModelChoiceField(queryset=Role.objects.all(), required=False)
-    organization = forms.ModelChoiceField(queryset=Organization.objects.all())
+class UserForm(forms.ModelForm):
+    """Form for creating and editing users"""
+    password = forms.CharField(
+        widget=forms.PasswordInput(attrs={"class": "form-control"}),
+        required=False,
+        help_text=_("Leave blank to keep existing password")
+    )
+    password_confirm = forms.CharField(
+        widget=forms.PasswordInput(attrs={"class": "form-control"}),
+        required=False,
+        label=_("Confirm Password"),
+        help_text=_("Enter the same password as before, for verification")
+    )
 
     class Meta:
         model = User
-        fields = ['username', 'first_name', 'last_name', 'email', 'password',
-                  'is_staff', 'is_active']
+        fields = ['username', 'email', 'first_name', 'last_name', 'role', 'region', 'phone_number', 'is_active']
+        widgets = {
+            'username': forms.TextInput(attrs={"class": "form-control"}),
+            'email': forms.EmailInput(attrs={"class": "form-control"}),
+            'first_name': forms.TextInput(attrs={"class": "form-control"}),
+            'last_name': forms.TextInput(attrs={"class": "form-control"}),
+            'role': forms.Select(attrs={"class": "form-select"}),
+            'region': forms.Select(attrs={"class": "form-select"}),
+            'phone_number': forms.TextInput(attrs={"class": "form-control"}),
+            'is_active': forms.CheckboxInput(attrs={"class": "form-check-input"}),
+        }
+        labels = {
+            'username': _("Nom d'utilisateur"),
+            'email': _("Email"),
+            'first_name': _("Prénom"),
+            'last_name': _("Nom"),
+            'role': _("Rôle"),
+            'region': _("Région"),
+            'phone_number': _("Numéro de téléphone"),
+            'is_active': _("Actif"),
+        }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        password = cleaned_data.get('password')
+        password_confirm = cleaned_data.get('password_confirm')
+
+        if password and password != password_confirm:
+            self.add_error('password_confirm', _("Les mots de passe ne correspondent pas."))
+
+        return cleaned_data
 
     def save(self, commit=True):
-        # override save to handle password hashing and profile fields
         user = super().save(commit=False)
-        pw = self.cleaned_data.get('password')
-        if pw:
-            user.set_password(pw)
+        password = self.cleaned_data.get('password')
+        if password:
+            user.set_password(password)
         if commit:
             user.save()
-            # update or create profile
-            profile, _ = UserProfile.objects.get_or_create(user=user)
-            profile.organization = self.cleaned_data['organization']
-            profile.role = self.cleaned_data.get('role')
-            profile.save()
         return user
+
+
+class UserCreationFormCustom(UserCreationForm):
+    """Custom user creation form"""
+    role = forms.ChoiceField(
+        choices=User.USER_ROLES,
+        widget=forms.Select(attrs={"class": "form-select"}),
+        label=_("Rôle")
+    )
+    region = forms.ModelChoiceField(
+        queryset=Region.objects.all(),
+        required=False,
+        widget=forms.Select(attrs={"class": "form-select"}),
+        label=_("Région")
+    )
+    phone_number = forms.CharField(
+        max_length=20,
+        required=False,
+        widget=forms.TextInput(attrs={"class": "form-control"}),
+        label=_("Numéro de téléphone")
+    )
+
+    class Meta:
+        model = User
+        fields = ('username', 'email', 'first_name', 'last_name', 'role', 'region', 'phone_number', 'password1', 'password2')
+        widgets = {
+            'username': forms.TextInput(attrs={"class": "form-control"}),
+            'email': forms.EmailInput(attrs={"class": "form-control"}),
+            'first_name': forms.TextInput(attrs={"class": "form-control"}),
+            'last_name': forms.TextInput(attrs={"class": "form-control"}),
+            'password1': forms.PasswordInput(attrs={"class": "form-control"}),
+            'password2': forms.PasswordInput(attrs={"class": "form-control"}),
+        }
+        labels = {
+            'username': _("Nom d'utilisateur"),
+            'email': _("Email"),
+            'first_name': _("Prénom"),
+            'last_name': _("Nom"),
+        }
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        user.role = self.cleaned_data.get('role', 'member')
+        user.region = self.cleaned_data.get('region')
+        user.phone_number = self.cleaned_data.get('phone_number')
+        if commit:
+            user.save()
+        return user
+

@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+{% load i18n crispy_forms_tags %}
+
+{% block title %}
+    {% if object %}{% trans "Modifier le Questionnaire" %}{% else %}{% trans "Nouveau Questionnaire" %}{% endif %} | CO3DATA
+{% endblock %}
+
+{% block breadcrumb %}
+    <li class="breadcrumb-item"><a href="{% url 'analytics:dashboard' %}">{% trans "Accueil" %}</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'questionnaires:questionnaire_list' %}">{% trans "Questionnaires" %}</a></li>
+    <li class="breadcrumb-item active" aria-current="page">
+        {% if object %}{% trans "Modifier" %}{% else %}{% trans "Nouveau" %}{% endif %}
+    </li>
+{% endblock %}
+
+{% block content %}
+<div class="card mb-3">
+    <div class="card-header bg-light">
+        <div class="row align-items-center">
+            <div class="col">
+                <h5 class="mb-0">
+                    {% if object %}
+                        {% trans "Modifier le Questionnaire" %}: {{ object.title }}
+                    {% else %}
+                        {% trans "Créer un Nouveau Questionnaire" %}
+                    {% endif %}
+                </h5>
+            </div>
+            <div class="col-auto">
+                <a href="{% url 'questionnaires:questionnaire_list' %}" class="btn btn-falcon-default btn-sm">
+                    <span class="fas fa-times me-1"></span>{% trans "Annuler" %}
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <form method="post" novalidate>
+            {% csrf_token %}
+            <div class="row g-3">
+                <div class="col-md-12">{{ form.title|as_crispy_field }}</div>
+                <div class="col-md-12">{{ form.description|as_crispy_field }}</div>
+                <div class="col-md-6">{{ form.target_model|as_crispy_field }}</div>
+                <div class="col-md-6">{{ form.is_active|as_crispy_field }}</div>
+            </div>
+
+            <div class="mt-4 text-end">
+                <button type="submit" class="btn btn-primary px-5">
+                    <span class="fas fa-save me-2"></span>
+                    {% if object %}{% trans "Enregistrer les modifications" %}{% else %}{% trans "Créer le Questionnaire" %}{% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

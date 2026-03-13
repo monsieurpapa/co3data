@@ -14,7 +14,7 @@
                 <h5 class="mb-0">{% trans "Liste des Membres" %}</h5>
             </div>
             <div class="col-auto">
-                {% if user.role in 'admin,regional_officer,manager' %}
+                {% if user.role in 'admin,regional_officer,manager' or user.is_superuser %}
                 <a href="{% url 'cooperatives:member_add' %}" class="btn btn-falcon-primary btn-sm">
                     <span class="fas fa-user-plus me-1"></span>{% trans "Ajouter un Membre" %}
                 </a>
@@ -41,7 +41,7 @@
                     <tr class="btn-reveal-trigger">
                         <td class="align-middle white-space-nowrap">{{ member.member_id }}</td>
                         <td class="align-middle white-space-nowrap">
-                            <a class="fw-semi-bold" href="{% url 'cooperatives:member_detail' member.pk %}">{{ member.first_name }} {{ member.last_name }}</a>
+                            <a class="fw-semi-bold" href="{% url 'cooperatives:member_detail' member.unique_id %}">{{ member.first_name }} {{ member.last_name }}</a>
                         </td>
                         <td class="align-middle white-space-nowrap">{{ member.cooperative.name }}</td>
                         <td class="align-middle white-space-nowrap">{{ member.get_gender_display }}</td>
@@ -58,18 +58,18 @@
                         </td>
                         <td class="align-middle text-end white-space-nowrap">
                             <div class="dropdown font-sans-serif">
-                                <button class="btn btn-link text-600 btn-sm dropdown-toggle btn-reveal" type="button" id="dropdown-{{ member.pk }}" data-bs-toggle="dropdown" data-boundary="viewport" aria-haspopup="true" aria-expanded="false">
+                                <button class="btn btn-link text-600 btn-sm dropdown-toggle btn-reveal" type="button" id="dropdown-{{ member.unique_id }}" data-bs-toggle="dropdown" data-boundary="viewport" aria-haspopup="true" aria-expanded="false">
                                     <span class="fas fa-ellipsis-h fs--1"></span>
                                 </button>
-                                <div class="dropdown-menu dropdown-menu-end border py-0" aria-labelledby="dropdown-{{ member.pk }}">
+                                <div class="dropdown-menu dropdown-menu-end border py-0" aria-labelledby="dropdown-{{ member.unique_id }}">
                                     <div class="bg-white py-2">
-                                        <a class="dropdown-item" href="{% url 'cooperatives:member_detail' member.pk %}">{% trans "Voir Profil" %}</a>
-                                        {% if user.role in 'admin,regional_officer,manager' %}
-                                        <a class="dropdown-item" href="{% url 'cooperatives:member_edit' member.pk %}">{% trans "Modifier" %}</a>
+                                        <a class="dropdown-item" href="{% url 'cooperatives:member_detail' member.unique_id %}">{% trans "Voir Profil" %}</a>
+                                        {% if user.role in 'admin,regional_officer,manager' or user.is_superuser %}
+                                        <a class="dropdown-item" href="{% url 'cooperatives:member_edit' member.unique_id %}">{% trans "Modifier" %}</a>
                                         {% endif %}
-                                        {% if user.role in 'admin,manager' %}
+                                        {% if user.role in 'admin,manager' or user.is_superuser %}
                                         <div class="dropdown-divider"></div>
-                                        <a class="dropdown-item text-danger" href="{% url 'cooperatives:member_delete' member.pk %}">{% trans "Supprimer" %}</a>
+                                        <a class="dropdown-item text-danger" href="{% url 'cooperatives:member_delete' member.unique_id %}">{% trans "Supprimer" %}</a>
                                         {% endif %}
                                     </div>
                                 </div>

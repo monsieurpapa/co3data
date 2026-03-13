@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Supprimer Production" %} | CO3DATA{% endblock %}
+
+{% block breadcrumb %}
+    <li class="breadcrumb-item"><a href="{% url 'analytics:dashboard' %}">{% trans "Accueil" %}</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'cooperatives:production_record_list' %}">{% trans "Productions" %}</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'cooperatives:production_record_detail' object.unique_id %}">{{ object.farm.farm_name }}</a></li>
+    <li class="breadcrumb-item active" aria-current="page">{% trans "Supprimer" %}</li>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="card border-danger">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0">
+                    <span class="fas fa-exclamation-triangle me-2"></span>{% trans "Supprimer l'Enregistrement de Production" %}
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-danger" role="alert">
+                    <strong>{% trans "Attention!" %}</strong> {% trans "Cette action est irréversible." %}
+                </div>
+
+                <div class="bg-light p-3 rounded mb-4">
+                    <p class="mb-2">
+                        <strong>{% trans "Exploitation:" %}</strong> {{ object.farm.farm_name }}
+                    </p>
+                    <p class="mb-2">
+                        <strong>{% trans "Membre:" %}</strong> {{ object.farm.member.first_name }} {{ object.farm.member.last_name }}
+                    </p>
+                    <p class="mb-2">
+                        <strong>{% trans "Type de Culture:" %}</strong> {{ object.get_crop_type_display }}
+                    </p>
+                    <p class="mb-2">
+                        <strong>{% trans "Date de Récolte:" %}</strong> {{ object.harvest_date|date:"d/m/Y" }}
+                    </p>
+                    <p class="mb-0">
+                        <strong>{% trans "Quantité:" %}</strong> {{ object.quantity_kg }} kg
+                    </p>
+                </div>
+
+                <p class="text-muted">
+                    {% trans "Êtes-vous sûr de vouloir supprimer cet enregistrement de production? Cette action ne peut pas être annulée." %}
+                </p>
+
+                <form method="post" class="mt-4">
+                    {% csrf_token %}
+                    <div class="d-grid gap-2 d-sm-flex justify-content-sm-end">
+                        <a href="{% url 'cooperatives:production_record_detail' object.unique_id %}" class="btn btn-secondary">
+                            <span class="fas fa-times me-1"></span>{% trans "Annuler" %}
+                        </a>
+                        <button type="submit" class="btn btn-danger">
+                            <span class="fas fa-trash me-1"></span>{% trans "Supprimer Définitivement" %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

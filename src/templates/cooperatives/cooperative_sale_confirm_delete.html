@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Supprimer la Vente" %} | CO3DATA{% endblock %}
+
+{% block breadcrumb %}
+    <li class="breadcrumb-item"><a href="{% url 'analytics:dashboard' %}">{% trans "Accueil" %}</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'cooperatives:cooperative_detail' cooperative.unique_id %}">{{ cooperative.name }}</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'cooperatives:cooperative_sale_list' cooperative.unique_id %}">{% trans "Ventes" %}</a></li>
+    <li class="breadcrumb-item active" aria-current="page">{% trans "Suppression" %}</li>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-5">
+    <div class="col-md-6">
+        <div class="card shadow-soft text-center">
+            <div class="card-body p-5">
+                <div class="mb-4">
+                    <span class="fas fa-exclamation-triangle text-danger fs-5"></span>
+                </div>
+                <h3>{% trans "Confirmation de suppression" %}</h3>
+                <p class="text-700">
+                    {% blocktrans with year=object.year buyer=object.buyer.name %}
+                        Êtes-vous sûr de vouloir supprimer la vente de <strong>{{ year }}</strong> pour <strong>{{ buyer }}</strong> ?
+                    {% endblocktrans %}
+                </p>
+                <div class="mt-4">
+                    <form method="post">
+                        {% csrf_token %}
+                        <a href="{% url 'cooperatives:cooperative_sale_list' cooperative.unique_id %}" class="btn btn-falcon-default me-2">
+                            {% trans "Annuler" %}
+                        </a>
+                        <button type="submit" class="btn btn-danger px-4">
+                            {% trans "Supprimer définitivement" %}
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

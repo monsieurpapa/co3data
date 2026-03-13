@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+{% load i18n crispy_forms_tags %}
+
+{% block breadcrumb %}
+    <li class="breadcrumb-item"><a href="{% url 'analytics:dashboard' %}">{% trans "Accueil" %}</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'cooperatives:buyer_list' %}">{% trans "Acheteurs" %}</a></li>
+    <li class="breadcrumb-item active" aria-current="page">
+        {% if object %}{% trans "Modifier" %}{% else %}{% trans "Nouveau" %}{% endif %}
+    </li>
+{% endblock %}
+
+{% block content %}
+<div class="card mb-3">
+    <div class="card-header bg-light">
+        <div class="row align-items-center">
+            <div class="col">
+                <h5 class="mb-0">
+                    {% if object %}
+                        {% trans "Modifier l'Acheteur" %}: {{ object.name }}
+                    {% else %}
+                        {% trans "Nouvel Acheteur" %}
+                    {% endif %}
+                </h5>
+            </div>
+            <div class="col-auto">
+                <a href="{% url 'cooperatives:buyer_list' %}" class="btn btn-falcon-default btn-sm">
+                    <span class="fas fa-times me-1"></span>{% trans "Annuler" %}
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <form method="post" novalidate>
+            {% csrf_token %}
+            <div class="row g-3">
+                <div class="col-md-6">{{ form.name|as_crispy_field }}</div>
+                <div class="col-md-6">{{ form.country|as_crispy_field }}</div>
+                <div class="col-md-6">{{ form.email|as_crispy_field }}</div>
+                <div class="col-md-6">{{ form.phone|as_crispy_field }}</div>
+            </div>
+
+            <div class="mt-4 text-end">
+                <button type="submit" class="btn btn-primary px-5">
+                    <span class="fas fa-save me-2"></span>
+                    {% if object %}{% trans "Enregistrer les modifications" %}{% else %}{% trans "Créer l'Acheteur" %}{% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

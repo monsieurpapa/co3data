@@ -34,8 +34,8 @@
         </div>
     </div>
 
-    <a href="{% url 'users:user_edit' user_obj.pk %}" class="btn btn-secondary">Edit</a>
-    <a href="{% url 'users:user_delete' user_obj.pk %}" class="btn btn-danger">Delete</a>
+    <a href="{% url 'users:user_edit' user_obj.unique_id %}" class="btn btn-secondary">Edit</a>
+    <a href="{% url 'users:user_delete' user_obj.unique_id %}" class="btn btn-danger">Delete</a>
     <a href="{% url 'users:user_list' %}" class="btn btn-link">Back to list</a>
 </div>
 {% endblock %}

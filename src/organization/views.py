@@ -42,9 +42,9 @@ def organization_create(request):
 
 
 @login_required
-def organization_update(request, pk):
+def organization_update(request, uuid):
     _staff_required(request)
-    org = get_object_or_404(Organization, pk=pk)
+    org = get_object_or_404(Organization, uuid=uuid)
     if request.method == 'POST':
         form = OrganizationForm(request.POST, instance=org)
         if form.is_valid():
@@ -56,9 +56,9 @@ def organization_update(request, pk):
 
 
 @login_required
-def organization_delete(request, pk):
+def organization_delete(request, uuid):
     _staff_required(request)
-    org = get_object_or_404(Organization, pk=pk)
+    org = get_object_or_404(Organization, uuid=uuid)
     if request.method == 'POST':
         org.delete()
         return redirect('organization:organization_list')

@@ -1,0 +1,33 @@
+{% load i18n %}
+{# Help content block - include at bottom of list templates #}
+<div class="mt-5 p-4 bg-light rounded">
+    <div class="row align-items-start g-3">
+        <div class="col-md-8">
+            <h5 class="mb-3">
+                <span class="fas fa-lightbulb text-warning me-2"></span>
+                {% block help_title %}{% trans "Aide — Fonctionnalités" %}{% endblock %}
+            </h5>
+            <ul class="fs--1 list-unstyled">
+                {% block help_items %}
+                    <li class="mb-2"><strong>{% trans "Ajouter:" %}</strong> {% trans "Créer une nouvelle entrée en cliquant sur le bouton Ajouter" %}</li>
+                    <li class="mb-2"><strong>{% trans "Voir:" %}</strong> {% trans "Afficher les détails complets d'une entrée" %}</li>
+                    <li class="mb-2"><strong>{% trans "Modifier:" %}</strong> {% trans "Éditer les informations d'une entrée existante" %}</li>
+                    <li class="mb-2"><strong>{% trans "Supprimer:" %}</strong> {% trans "Supprimer une entrée (attention: cette action est irréversible)" %}</li>
+                {% endblock %}
+            </ul>
+        </div>
+        <div class="col-md-4">
+            <div class="bg-white p-3 rounded border border-2 border-info">
+                <h6 class="mb-2">
+                    <span class="fas fa-info-circle text-info me-2"></span>
+                    {% trans "Conseil" %}
+                </h6>
+                <p class="fs--1 mb-0">
+                    {% block help_tip %}
+                        {% trans "Utilisez le bouton de menu des actions (trois points) pour accéder rapidement aux options disponibles pour chaque élément." %}
+                    {% endblock %}
+                </p>
+            </div>
+        </div>
+    </div>
+</div>

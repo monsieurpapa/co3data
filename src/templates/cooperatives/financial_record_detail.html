@@ -1,0 +1,173 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Enregistrement Financier" %} | CO3DATA{% endblock %}
+
+{% block breadcrumb %}
+    <li class="breadcrumb-item"><a href="{% url 'analytics:dashboard' %}">{% trans "Accueil" %}</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'cooperatives:financial_record_list' %}">{% trans "Enregistrements Financiers" %}</a></li>
+    <li class="breadcrumb-item active" aria-current="page">{{ object.get_transaction_type_display }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card mb-3">
+            <div class="card-header bg-light">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        {% if object.transaction_type == 'income' %}
+                            <span class="badge badge-soft-success me-2">{% trans "Revenu" %}</span>
+                        {% elif object.transaction_type == 'expense' %}
+                            <span class="badge badge-soft-danger me-2">{% trans "Dépense" %}</span>
+                        {% else %}
+                            <span class="badge badge-soft-warning me-2">{% trans "Ajustement" %}</span>
+                        {% endif %}
+                        {% trans "Enregistrement Financier" %}
+                    </h5>
+                    <div>
+                        {% if user.profile.role.name in 'admin,manager,accountant' or user.is_superuser %}
+                        <a href="{% url 'cooperatives:financial_record_edit' object.unique_id %}" class="btn btn-falcon-primary btn-sm">
+                            <span class="fas fa-edit me-1"></span>{% trans "Modifier" %}
+                        </a>
+                        {% endif %}
+                        {% if user.profile.role.name in 'admin,manager' or user.is_superuser %}
+                        <a href="{% url 'cooperatives:financial_record_delete' object.unique_id %}" class="btn btn-danger btn-sm">
+                            <span class="fas fa-trash me-1"></span>{% trans "Supprimer" %}
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row gx-3">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">{% trans "Coopérative" %}</label>
+                        <p class="form-control-plaintext fw-semi-bold">
+                            <a href="{% url 'cooperatives:cooperative_detail' object.cooperative.unique_id %}">
+                                {{ object.cooperative.name }}
+                            </a>
+                        </p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">{% trans "Type de Transaction" %}</label>
+                        <p class="form-control-plaintext">
+                            <span class="badge {% if object.transaction_type == 'income' %}badge-soft-success{% elif object.transaction_type == 'expense' %}badge-soft-danger{% else %}badge-soft-warning{% endif %}">
+                                {{ object.get_transaction_type_display }}
+                            </span>
+                        </p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">{% trans "Date de Transaction" %}</label>
+                        <p class="form-control-plaintext">
+                            <i class="fas fa-calendar me-1"></i>{{ object.transaction_date|date:"d/m/Y" }}
+                        </p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">{% trans "Montant" %}</label>
+                        <p class="form-control-plaintext fw-semi-bold fs-3">
+                            <span class="{% if object.transaction_type == 'income' %}text-success{% elif object.transaction_type == 'expense' %}text-danger{% else %}text-warning{% endif %}">
+                                {{ object.amount|floatformat:2 }}
+                            </span>
+                        </p>
+                    </div>
+                    {% if object.description %}
+                    <div class="col-12 mb-3">
+                        <label class="form-label">{% trans "Description" %}</label>
+                        <div class="bg-light p-2 rounded small">
+                            {{ object.description }}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Questionnaires Section -->
+        <div class="card">
+            <div class="card-header bg-light">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">{% trans "Questionnaires Associés" %}</h5>
+                    {% if user.profile.role.name in 'admin,regional_officer,manager' or user.is_superuser %}
+                    <a href="{% url 'questionnaires:submit_questionnaire' %}?target_model=financial_record&target_id={{ object.unique_id }}" class="btn btn-falcon-primary btn-sm">
+                        <span class="fas fa-plus me-1"></span>{% trans "Nouveau Questionnaire" %}
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="card-body">
+                {% if submissions %}
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0">
+                        <thead class="bg-200">
+                            <tr>
+                                <th>{% trans "Questionnaire" %}</th>
+                                <th>{% trans "Date" %}</th>
+                                <th>{% trans "État" %}</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for submission in submissions %}
+                            <tr>
+                                <td>{{ submission.questionnaire.title }}</td>
+                                <td>{{ submission.submitted_at|date:"d/m/Y H:i" }}</td>
+                                <td><span class="badge badge-soft-success">{% trans "Soumis" %}</span></td>
+                                <td class="text-end">
+                                    <a href="{% url 'questionnaires:submission_detail' submission.unique_id %}" class="btn btn-link btn-sm">
+                                        <span class="fas fa-eye"></span>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted mb-0">{% trans "Aucun questionnaire associé." %}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Side Panel -->
+    <div class="col-lg-4">
+        <div class="card mb-3">
+            <div class="card-header bg-light">
+                <h6 class="mb-0">{% trans "Audit Trail" %}</h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <small class="text-muted">{% trans "Enregistrement créé" %}</small>
+                    <p class="mb-0">{{ object.created_at|date:"d/m/Y H:i" }}</p>
+                </div>
+                <div class="mb-3">
+                    <small class="text-muted">{% trans "Dernière modification" %}</small>
+                    <p class="mb-0">{{ object.updated_at|date:"d/m/Y H:i" }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Summary Card -->
+        <div class="card">
+            <div class="card-header bg-light">
+                <h6 class="mb-0">{% trans "Résumé de la Transaction" %}</h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <small class="text-muted d-block">{% trans "Bénéficiaire" %}</small>
+                    <strong>{{ object.cooperative.name }}</strong>
+                </div>
+                <div class="mb-3">
+                    <small class="text-muted d-block">{% trans "Région" %}</small>
+                    <strong>{{ object.cooperative.region_name }}</strong>
+                </div>
+                <div>
+                    <small class="text-muted d-block">{% trans "Statut" %}</small>
+                    <span class="badge badge-soft-success">{% trans "Enregistré" %}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

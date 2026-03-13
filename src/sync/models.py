@@ -6,6 +6,7 @@ import uuid
 
 
 class Device(models.Model):
+    unique_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, db_index=True)
     device_id = models.CharField(max_length=255, unique=True, help_text=_("Unique identifier for the mobile device"))
     user = models.ForeignKey("users.User", on_delete=models.CASCADE, related_name="devices")
     last_sync_at = models.DateTimeField(blank=True, null=True)
@@ -21,6 +22,7 @@ class Device(models.Model):
 
 
 class PendingChange(models.Model):
+    unique_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, db_index=True)
     CHANGE_TYPE_CHOICES = (
         ("create", _("Create")),
         ("update", _("Update")),

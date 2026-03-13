@@ -4,6 +4,8 @@ from users.models import Region, User
 import uuid
 
 class Cooperative(models.Model):
+    unique_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, db_index=True)
+
     COOPERATIVE_TYPES = (
         ("coffee", _("Coffee Cooperative")),
         ("cocoa", _("Cocoa Cooperative")),
@@ -28,6 +30,8 @@ class Cooperative(models.Model):
 
 
 class WashingStation(models.Model):
+    unique_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, db_index=True)
+
     cooperative = models.ForeignKey(Cooperative, on_delete=models.CASCADE, related_name="washing_stations")
     name = models.CharField(max_length=255)
     village = models.CharField(max_length=100, blank=True, null=True)
@@ -43,6 +47,8 @@ class WashingStation(models.Model):
         return f"{self.name} ({self.cooperative})"
 
 class Member(models.Model):
+    unique_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, db_index=True)
+
     GENDER_CHOICES = (
         ("male", _("Male")),
         ("female", _("Female")),
@@ -114,6 +120,8 @@ class Member(models.Model):
                 raise ValidationError({"farmer_code": _("Invalid farmer code number segment.")})
 
 class Farm(models.Model):
+    unique_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, db_index=True)
+
     member = models.ForeignKey(Member, on_delete=models.CASCADE, related_name="farms")
     farm_name = models.CharField(max_length=255, blank=True, null=True)
     size_hectares = models.DecimalField(max_digits=10, decimal_places=2)
@@ -129,6 +137,8 @@ class Farm(models.Model):
         return self.farm_name or f"Farm of {self.member.first_name} {self.member.last_name}"
 
 class ProductionRecord(models.Model):
+    unique_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, db_index=True)
+
     CROP_TYPE_CHOICES = (
         ("coffee", _("Coffee")),
         ("cocoa", _("Cocoa")),
@@ -164,6 +174,7 @@ class ProductionRecord(models.Model):
 
     sync_uuid = models.UUIDField(default=uuid.uuid4, editable=False, null=True, blank=True, db_index=True)
     is_locally_created = models.BooleanField(default=False)
+    participants = models.ManyToManyField(User, related_name="production_records_participated", blank=True)
 
     class Meta:
         verbose_name = _("Production Record")
@@ -219,6 +230,8 @@ class ProductionRecord(models.Model):
         super().save(*args, **kwargs)
 
 class FinancialRecord(models.Model):
+    unique_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, db_index=True)
+
     TRANSACTION_TYPE_CHOICES = (
         ("income", _("Income")),
         ("expense", _("Expense")),
@@ -239,3 +252,72 @@ class FinancialRecord(models.Model):
 
     def __str__(self):
         return f"{self.transaction_type} of {self.amount} for {self.cooperative} on {self.transaction_date}"
+
+
+class Buyer(models.Model):
+    unique_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, db_index=True)
+    name = models.CharField(max_length=255)
+    country = models.CharField(max_length=100, blank=True, null=True)
+    email = models.EmailField(blank=True, null=True)
+    phone = models.CharField(max_length=50, blank=True, null=True)
+
+    class Meta:
+        verbose_name = _("Buyer")
+        verbose_name_plural = _("Buyers")
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
+class CooperativeCertificate(models.Model):
+    unique_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, db_index=True)
+    cooperative = models.ForeignKey(Cooperative, on_delete=models.CASCADE, related_name="certificates")
+    name = models.CharField(max_length=255)
+    issuer = models.CharField(max_length=255, blank=True, null=True)
+    issued_date = models.DateField(blank=True, null=True)
+    expires_date = models.DateField(blank=True, null=True)
+    document = models.FileField(upload_to="cooperative_certificates/")
+    notes = models.TextField(blank=True, null=True)
+
+    class Meta:
+        verbose_name = _("Cooperative Certificate")
+        verbose_name_plural = _("Cooperative Certificates")
+        ordering = ["-issued_date"]
+
+    def __str__(self):
+        return f"{self.name} ({self.cooperative})"
+
+
+class CooperativeSale(models.Model):
+    unique_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, db_index=True)
+    cooperative = models.ForeignKey(Cooperative, on_delete=models.CASCADE, related_name="sales")
+    buyer = models.ForeignKey(Buyer, on_delete=models.PROTECT, related_name="sales")
+
+    year = models.PositiveIntegerField()
+    grade = models.CharField(max_length=50)
+    destination_country = models.CharField(max_length=100)
+    quantity_kg = models.DecimalField(max_digits=12, decimal_places=2)
+    price_per_kg = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
+    total_value = models.DecimalField(max_digits=14, decimal_places=2, blank=True, null=True)
+    arrival_date = models.DateField(blank=True, null=True)
+    notes = models.TextField(blank=True, null=True)
+
+    class Meta:
+        verbose_name = _("Cooperative Sale")
+        verbose_name_plural = _("Cooperative Sales")
+        ordering = ["-year", "-quantity_kg"]
+
+    def __str__(self):
+        return f"{self.cooperative} → {self.buyer} ({self.year})"
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+
+        if self.quantity_kg is not None and self.quantity_kg <= 0:
+            raise ValidationError({"quantity_kg": _("Quantity must be positive.")})
+
+    def save(self, *args, **kwargs):
+        if self.price_per_kg is not None and self.quantity_kg is not None:
+            self.total_value = self.price_per_kg * self.quantity_kg
+        super().save(*args, **kwargs)

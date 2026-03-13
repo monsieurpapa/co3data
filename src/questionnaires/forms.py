@@ -57,3 +57,36 @@ class QuestionnaireSubmissionForm(forms.Form):
                 answer_data['value_text'] = value
                 
             Answer.objects.create(**answer_data)
+
+
+class QuestionForm(forms.ModelForm):
+    class Meta:
+        model = Question
+        fields = ['text', 'question_type', 'order', 'is_required', 'options']
+        widgets = {
+            'text': forms.Textarea(attrs={'rows': 2, 'class': 'form-control'}),
+            'question_type': forms.Select(attrs={'class': 'form-select'}),
+            'order': forms.NumberInput(attrs={'class': 'form-control', 'min': 0}),
+            'is_required': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'options': forms.Textarea(attrs={
+                'rows': 2,
+                'class': 'form-control',
+                'placeholder': _('Comma-separated options for select fields'),
+            }),
+        }
+
+    def clean_options(self):
+        options = self.cleaned_data.get('options')
+        if options is None:
+            return []
+        if isinstance(options, list):
+            return options
+        return [opt.strip() for opt in str(options).split(',') if opt.strip()]
+
+
+QuestionFormSet = forms.modelformset_factory(
+    Question,
+    form=QuestionForm,
+    extra=0,
+    can_delete=True,
+)

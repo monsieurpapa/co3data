@@ -1,0 +1,29 @@
+{% load i18n %}
+{# Reusable CRUD action dropdown menu #}
+{# Usage: {% include 'components/crud_actions.html' with object=item view_url='app:item_detail' edit_url='app:item_edit' delete_url='app:item_delete' can_view=True can_edit=can_edit_perm can_delete=can_delete_perm %} #}
+
+<div class="dropdown font-sans-serif">
+    <button class="btn btn-link text-600 btn-sm dropdown-toggle btn-reveal" type="button" id="dropdown-{{ object.pk }}" data-bs-toggle="dropdown" data-boundary="viewport" aria-haspopup="true" aria-expanded="false">
+        <span class="fas fa-ellipsis-h fs--1"></span>
+    </button>
+    <div class="dropdown-menu dropdown-menu-end border py-0" aria-labelledby="dropdown-{{ object.pk }}">
+        <div class="bg-white py-2">
+            {% if can_view and view_url %}
+            <a class="dropdown-item" href="{{ view_url }}">
+                <span class="fas fa-eye me-2 text-primary"></span>{% trans "Voir les détails" %}
+            </a>
+            {% endif %}
+            {% if can_edit and edit_url %}
+            <a class="dropdown-item" href="{{ edit_url }}">
+                <span class="fas fa-edit me-2 text-info"></span>{% trans "Modifier" %}
+            </a>
+            {% endif %}
+            {% if can_delete and delete_url %}
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item text-danger" href="{{ delete_url }}">
+                <span class="fas fa-trash me-2"></span>{% trans "Supprimer" %}
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</div>

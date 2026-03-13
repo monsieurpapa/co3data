@@ -4,7 +4,7 @@ from core.mixins import RoleRequiredMixin
 from .models import Device, PendingChange
 
 
-class SyncStatusView(LoginRequiredMixin, RoleRequiredMixin, TemplateView):
+class SyncStatusView(RoleRequiredMixin, LoginRequiredMixin, TemplateView):
     template_name = 'sync/sync_status.html'
 
     required_roles = ["manager", "regional_officer", "admin"]

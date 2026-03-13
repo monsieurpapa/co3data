@@ -10,31 +10,96 @@
 {% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
+<div class="row g-3">
     <div class="col-lg-8">
         <div class="card mb-3">
             <div class="card-header bg-light">
                 <div class="row align-items-center">
                     <div class="col">
                         <h5 class="mb-0">{{ questionnaire.title }}</h5>
-                        <p class="mb-0 fs--1 text-600">{{ questionnaire.description }}</p>
+                        <p class="mb-0 fs--1 text-600">{% trans "Cible" %}: {{ questionnaire.get_target_model_display }}</p>
+                    </div>
+                    <div class="col-auto">
+                        <a href="{% url 'questionnaires:questionnaire_detail' questionnaire.unique_id %}" class="btn btn-falcon-default btn-sm">
+                            <span class="fas fa-arrow-left me-1"></span>{% trans "Retour" %}
+                        </a>
                     </div>
                 </div>
             </div>
-            <div class="card-body">
-                {% if target_object %}
-                <div class="alert alert-info border-2 d-flex align-items-center" role="alert">
-                    <div class="bg-info me-3 icon-item"><span class="fas fa-info-circle text-white fs-3"></span></div>
-                    <p class="mb-0 flex-1">
-                        {% blocktrans with target=questionnaire.get_target_model_display name=target_object %}
-                            Vous soumettez ce questionnaire pour le/la <strong>{{ target }}</strong>: <strong>{{ name }}</strong>.
-                        {% endblocktrans %}
-                    </p>
-                </div>
-                {% endif %}
+            {% if questionnaire.description %}
+            <div class="card-body bg-light border-bottom">
+                <p class="text-700 fs--1">{{ questionnaire.description }}</p>
+            </div>
+            {% endif %}
+        </div>
 
-                <form method="post" novalidate>
-                    {% csrf_token %}
+        {% if target_object %}
+        <div class="card mb-3">
+            <div class="card-header bg-soft-primary">
+                <h6 class="mb-0 text-primary">
+                    <span class="fas fa-target me-2"></span>{% trans "Cible de la Soumission" %}
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% if target_type == 'cooperative' %}
+                    <div class="col-sm-6">
+                        <p class="mb-1 fw-bold text-700">{% trans "Coopérative" %}</p>
+                        <p class="text-1000">{{ target_object.name }}</p>
+                    </div>
+                    <div class="col-sm-6">
+                        <p class="mb-1 fw-bold text-700">{% trans "Type" %}</p>
+                        <p class="text-1000">{{ target_object.get_type_display }}</p>
+                    </div>
+                    {% elif target_type == 'member' %}
+                    <div class="col-sm-6">
+                        <p class="mb-1 fw-bold text-700">{% trans "Membre" %}</p>
+                        <p class="text-1000">{{ target_object.first_name }} {{ target_object.last_name }}</p>
+                    </div>
+                    <div class="col-sm-6">
+                        <p class="mb-1 fw-bold text-700">{% trans "ID" %}</p>
+                        <p class="text-1000">{{ target_object.member_id }}</p>
+                    </div>
+                    {% elif target_type == 'user' %}
+                    <div class="col-sm-6">
+                        <p class="mb-1 fw-bold text-700">{% trans "Utilisateur" %}</p>
+                        <p class="text-1000">{{ target_object.get_full_name|default:target_object.username }}</p>
+                    </div>
+                    <div class="col-sm-6">
+                        <p class="mb-1 fw-bold text-700">{% trans "Email" %}</p>
+                        <p class="text-1000">{{ target_object.email }}</p>
+                    </div>
+                    {% elif target_type == 'financial_record' %}
+                    <div class="col-sm-6">
+                        <p class="mb-1 fw-bold text-700">{% trans "Type de Transaction" %}</p>
+                        <p class="text-1000">{{ target_object.get_transaction_type_display }}</p>
+                    </div>
+                    <div class="col-sm-6">
+                        <p class="mb-1 fw-bold text-700">{% trans "Montant" %}</p>
+                        <p class="text-1000">{{ target_object.amount }} {% trans "FC" %}</p>
+                    </div>
+                    {% elif target_type == 'production' %}
+                    <div class="col-sm-6">
+                        <p class="mb-1 fw-bold text-700">{% trans "Type de Production" %}</p>
+                        <p class="text-1000">{{ target_object.get_record_type_display }}</p>
+                    </div>
+                    <div class="col-sm-6">
+                        <p class="mb-1 fw-bold text-700">{% trans "Quantité (kg)" %}</p>
+                        <p class="text-1000">{{ target_object.quantity_kg }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <form method="post" novalidate>
+            {% csrf_token %}
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0">{% trans "Questions" %}</h6>
+                </div>
+                <div class="card-body">
                     <div class="row g-3">
                         {% for field in form %}
                         <div class="col-12">
@@ -42,13 +107,46 @@
                         </div>
                         {% endfor %}
                     </div>
-                    
-                    <div class="mt-4 text-end">
-                        <button type="submit" class="btn btn-primary px-5">
-                            <span class="fas fa-paper-plane me-2"></span>{% trans "Envoyer la réponse" %}
-                        </button>
-                    </div>
-                </form>
+                </div>
+            </div>
+            
+            <div class="d-flex gap-2 mt-3">
+                <button type="submit" class="btn btn-falcon-primary">
+                    <span class="fas fa-paper-plane me-1"></span>{% trans "Soumettre" %}
+                </button>
+                <a href="{% url 'questionnaires:questionnaire_list' %}" class="btn btn-falcon-default">
+                    {% trans "Annuler" %}
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header bg-light">
+                <h6 class="mb-0">{% trans "Informations de la Soumission" %}</h6>
+            </div>
+            <div class="card-body">
+                <p class="mb-2">
+                    <span class="fw-bold text-700">{% trans "Total de Questions" %}:</span>
+                    <span class="badge badge-soft-info">{{ questionnaire.questions.count }}</span>
+                </p>
+                <p class="mb-2">
+                    <span class="fw-bold text-700">{% trans "Questionnaire" %}:</span>
+                    <span class="text-700">{{ questionnaire.title }}</span>
+                </p>
+                <p class="mb-2">
+                    <span class="fw-bold text-700">{% trans "Statut" %}:</span>
+                    {% if questionnaire.is_active %}
+                    <span class="badge badge-soft-success">{% trans "Actif" %}</span>
+                    {% else %}
+                    <span class="badge badge-soft-secondary">{% trans "Inactif" %}</span>
+                    {% endif %}
+                </p>
+                <hr class="my-3" />
+                <p class="fs--1 text-600 mb-0">
+                    {% trans "Veuillez remplir tous les champs obligatoires marqués d'un astérisque" %} <span class="text-danger">*</span>
+                </p>
             </div>
         </div>
     </div>

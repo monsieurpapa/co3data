@@ -9,14 +9,17 @@
         <div class="row align-items-center">
             <div class="col">
                 <h5 class="mb-0">{% trans "Détails de la Coopérative" %}: {{ cooperative.name }}</h5>
+                <small class="text-600">{% trans "Établie le" %} {{ cooperative.establishment_date|date:"d/m/Y"|default:"---" }}</small>
             </div>
             <div class="col-auto">
                 <a href="{% url 'cooperatives:cooperative_list' %}" class="btn btn-falcon-default btn-sm me-2">
                     <span class="fas fa-arrow-left me-1"></span>{% trans "Retour" %}
                 </a>
-                <a href="#" class="btn btn-falcon-primary btn-sm">
+                {% if user.profile.role.name in 'admin,regional_officer,manager' or user.is_superuser %}
+                <a href="{% url 'cooperatives:cooperative_edit' cooperative.unique_id %}" class="btn btn-falcon-primary btn-sm">
                     <span class="fas fa-edit me-1"></span>{% trans "Modifier" %}
                 </a>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -56,7 +59,7 @@
                             <h6 class="mb-1">{{ q.title }}</h6>
                             <p class="mb-0 fs--1 text-600">{{ q.description|truncatewords:10 }}</p>
                         </div>
-                        <a href="{% url 'questionnaires:questionnaire_submit' q.pk %}?target_id={{ cooperative.pk }}" class="btn btn-falcon-primary btn-sm">
+                        <a href="{% url 'questionnaires:questionnaire_submit' q.unique_id %}?target_id={{ cooperative.unique_id }}" class="btn btn-falcon-primary btn-sm">
                             <span class="fas fa-edit me-1"></span>{% trans "Répondre" %}
                         </a>
                     </div>
@@ -70,9 +73,16 @@
 </div>
 
 <div class="card mb-3">
-    <div class="card-header bg-light d-flex justify-content-between">
-        <h5 class="mb-0">{% trans "Membres de la Coopérative" %}</h5>
-        <span class="badge badge-soft-info">{{ cooperative.members.count }} {% trans "Membres" %}</span>
+    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+        <div>
+            <h5 class="mb-0">{% trans "Membres de la Coopérative" %}</h5>
+            <span class="badge badge-soft-info">{{ cooperative.members.count }} {% trans "Membres" %}</span>
+        </div>
+        {% if user.profile.role.name in 'admin,regional_officer,manager' or user.is_superuser %}
+        <a href="{% url 'cooperatives:member_add' %}" class="btn btn-falcon-primary btn-sm">
+            <span class="fas fa-user-plus me-1"></span>{% trans "Ajouter un Membre" %}
+        </a>
+        {% endif %}
     </div>
     <div class="card-body p-0">
         <div class="table-responsive scrollbar">
@@ -90,11 +100,11 @@
                     {% for member in members %}
                     <tr>
                         <td>{{ member.member_id }}</td>
-                        <td><a href="{% url 'cooperatives:member_detail' member.pk %}">{{ member.first_name }} {{ member.last_name }}</a></td>
+                        <td><a href="{% url 'cooperatives:member_detail' member.unique_id %}">{{ member.first_name }} {{ member.last_name }}</a></td>
                         <td>{{ member.get_gender_display }}</td>
                         <td>{{ member.get_age_group_display }}</td>
                         <td class="text-end">
-                            <a href="{% url 'cooperatives:member_detail' member.pk %}" class="btn btn-link p-0 ms-2" title="View"><span class="fas fa-eye"></span></a>
+                            <a href="{% url 'cooperatives:member_detail' member.unique_id %}" class="btn btn-link p-0 ms-2" title="View"><span class="fas fa-eye"></span></a>
                         </td>
                     </tr>
                     {% empty %}
@@ -133,4 +143,185 @@
     </div>
     {% endif %}
 </div>
+
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card mb-3">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="mb-0">{% trans "Certificats" %}</h5>
+                    <small class="text-600">{% trans "Documents officiels associés à cette coopérative" %}</small>
+                </div>
+                {% if user.profile.role.name in 'admin,regional_officer,manager' or user.is_superuser %}
+                <a href="{% url 'cooperatives:cooperative_certificate_add' cooperative.unique_id %}" class="btn btn-falcon-primary btn-sm">
+                    <span class="fas fa-plus me-1"></span>{% trans "Ajouter" %}
+                </a>
+                {% endif %}
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive scrollbar">
+                    <table class="table table-sm table-striped fs--1 mb-0 overflow-hidden">
+                        <thead class="bg-200 text-900">
+                            <tr>
+                                <th>{% trans "Nom" %}</th>
+                                <th>{% trans "Émis par" %}</th>
+                                <th>{% trans "Date" %}</th>
+                                <th>{% trans "Expire" %}</th>
+                                <th class="text-end">{% trans "Actions" %}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for cert in certificates|slice:":5" %}
+                            <tr>
+                                <td>{{ cert.name }}</td>
+                                <td>{{ cert.issuer|default:"-" }}</td>
+                                <td>{{ cert.issued_date|date:"d/m/Y"|default:"-" }}</td>
+                                <td>{{ cert.expires_date|date:"d/m/Y"|default:"-" }}</td>
+                                <td class="text-end">
+                                    <div class="d-flex justify-content-end gap-2">
+                                        {% if cert.document %}
+                                        <a href="{{ cert.document.url }}" target="_blank" class="btn btn-sm btn-outline-secondary">
+                                            <span class="fas fa-file-pdf"></span>
+                                        </a>
+                                        {% endif %}
+                                        <a href="{% url 'cooperatives:cooperative_certificate_edit' cooperative.unique_id cert.unique_id %}" class="btn btn-sm btn-outline-info">
+                                            <span class="fas fa-edit"></span>
+                                        </a>
+                                        <a href="{% url 'cooperatives:cooperative_certificate_delete' cooperative.unique_id cert.unique_id %}" class="btn btn-sm btn-outline-danger">
+                                            <span class="fas fa-trash"></span>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center py-4">{% trans "Aucun certificat disponible." %}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% if certificates|length > 5 %}
+            <div class="card-footer bg-light text-end">
+                <a href="{% url 'cooperatives:cooperative_certificate_list' cooperative.unique_id %}" class="btn btn-sm btn-link">
+                    {% trans "Voir tous les certificats" %}
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card mb-3">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="mb-0">{% trans "Historique des ventes" %}</h5>
+                    <small class="text-600">{% trans "Volumes et destinations" %}</small>
+                </div>
+                {% if user.profile.role.name in 'admin,regional_officer,manager' or user.is_superuser %}
+                <a href="{% url 'cooperatives:cooperative_sale_add' cooperative.unique_id %}" class="btn btn-falcon-primary btn-sm">
+                    <span class="fas fa-plus me-1"></span>{% trans "Ajouter" %}
+                </a>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                {% if sales %}
+                <div class="row g-3">
+                    <div class="col-12">
+                        <canvas id="salesByYearChart" height="200"></canvas>
+                    </div>
+                    <div class="col-12">
+                        <canvas id="salesByDestinationChart" height="200"></canvas>
+                    </div>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <p class="text-600">{% trans "Aucune vente enregistrée." %}</p>
+                </div>
+                {% endif %}
+            </div>
+            <div class="card-footer bg-light text-end">
+                <a href="{% url 'cooperatives:cooperative_sale_list' cooperative.unique_id %}" class="btn btn-sm btn-link">
+                    {% trans "Voir toutes les ventes" %}
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+    {% if sales %}
+    {{ sales_by_year|json_script:"sales-by-year-data" }}
+    {{ sales_by_destination|json_script:"sales-by-destination-data" }}
+    <script>
+        (function() {
+            const yearData = JSON.parse(document.getElementById('sales-by-year-data').textContent || '[]');
+            const destData = JSON.parse(document.getElementById('sales-by-destination-data').textContent || '[]');
+
+            const yearLabels = yearData.map(d => d.year);
+            const yearValues = yearData.map(d => d.total_qty);
+
+            const destLabels = destData.map(d => d.destination_country);
+            const destValues = destData.map(d => d.total_qty);
+
+            const yearCtx = document.getElementById('salesByYearChart');
+            if (yearCtx) {
+                new Chart(yearCtx.getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: yearLabels,
+                        datasets: [{
+                            label: '{% trans "Quantité (kg)" %}',
+                            data: yearValues,
+                            backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                            borderColor: 'rgba(54, 162, 235, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: { mode: 'index', intersect: false }
+                        },
+                        scales: {
+                            x: { title: { display: true, text: '{% trans "Année" %}' } },
+                            y: { title: { display: true, text: '{% trans "Quantité (kg)" %}' }, beginAtZero: true }
+                        }
+                    }
+                });
+            }
+
+            const destCtx = document.getElementById('salesByDestinationChart');
+            if (destCtx) {
+                new Chart(destCtx.getContext('2d'), {
+                    type: 'pie',
+                    data: {
+                        labels: destLabels,
+                        datasets: [{
+                            data: destValues,
+                            backgroundColor: [
+                                'rgba(54, 162, 235, 0.6)',
+                                'rgba(255, 99, 132, 0.6)',
+                                'rgba(255, 206, 86, 0.6)',
+                                'rgba(75, 192, 192, 0.6)',
+                                'rgba(153, 102, 255, 0.6)',
+                                'rgba(255, 159, 64, 0.6)',
+                            ],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: { position: 'bottom' }
+                        }
+                    }
+                });
+            }
+        })();
+    </script>
+    {% endif %}
+{% endblock %}
 {% endblock %}

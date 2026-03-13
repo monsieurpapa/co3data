@@ -1,44 +1,92 @@
 {% extends 'base.html' %}
-{% block title %}Users | Admin{% endblock %}
+{% load i18n %}
+{% block title %}{% trans "Utilisateurs" %} | {% trans "Admin" %}{% endblock %}
 
 {% block content %}
-<div class="container">
-    <h2>Users</h2>
-    <a href="{% url 'users:user_add' %}" class="btn btn-primary mb-2">Add user</a>
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>Username</th>
-                <th>Email</th>
-                <th>Organization</th>
-                <th>Role</th>
-                <th>Staff</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for user in users %}
-            <tr>
-                <td>{{ user.username }}</td>
-                <td>{{ user.email }}</td>
-                <td>{% if user.profile.organization %}{{ user.profile.organization.name }}{% endif %}</td>
-                <td>{% if user.profile.role %}{{ user.profile.role.name }}{% endif %}</td>
-                <td>{{ user.is_staff }}</td>
-                <td>
-                    <a href="{% url 'users:user_detail' user.pk %}" class="btn btn-sm btn-info">View</a>
-                    <a href="{% url 'users:user_edit' user.pk %}" class="btn btn-sm btn-secondary">Edit</a>
-                    <a href="{% url 'users:user_delete' user.pk %}" class="btn btn-sm btn-danger">Delete</a>
-                </td>
-            </tr>
-            {% empty %}
-            <tr><td colspan="6">No users.</td></tr>
-            {% endfor %}
-        </tbody>
-    </table>
+<div class="card mb-3">
+    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">{% trans "Gestion des Utilisateurs" %}</h5>
+        <a href="{% url 'users:user_add' %}" class="btn btn-falcon-primary btn-sm">
+            <span class="fas fa-user-plus me-1"></span>{% trans "Ajouter un Utilisateur" %}
+        </a>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive scrollbar">
+            <table class="table table-sm table-striped fs--1 mb-0 overflow-hidden">
+                <thead class="bg-200 text-900">
+                    <tr>
+                        <th class="align-middle">{% trans "Nom d'utilisateur" %}</th>
+                        <th class="align-middle">{% trans "Email" %}</th>
+                        <th class="align-middle">{% trans "Organisation" %}</th>
+                        <th class="align-middle">{% trans "Rôle" %}</th>
+                        <th class="align-middle">{% trans "Actif" %}</th>
+                        <th class="align-middle text-end">{% trans "Actions" %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr>
+                        <td class="align-middle fw-semi-bold">{{ user.username }}</td>
+                        <td class="align-middle">{{ user.email }}</td>
+                        <td class="align-middle">
+                            {% if user.profile.organization %}
+                            <span class="badge badge-soft-info">{{ user.profile.organization.name }}</span>
+                            {% else %}
+                            <span class="text-600">—</span>
+                            {% endif %}
+                        </td>
+                        <td class="align-middle">
+                            {% if user.profile.role %}
+                            <span class="badge badge-soft-primary">{{ user.profile.role.name }}</span>
+                            {% else %}
+                            <span class="badge badge-soft-secondary">{% trans "Standard" %}</span>
+                            {% endif %}
+                        </td>
+                        <td class="align-middle">
+                            {% if user.is_active %}
+                            <span class="badge badge-soft-success"><span class="fas fa-check me-1"></span>{% trans "Oui" %}</span>
+                            {% else %}
+                            <span class="badge badge-soft-danger"><span class="fas fa-times me-1"></span>{% trans "Non" %}</span>
+                            {% endif %}
+                        </td>
+                        <td class="align-middle text-end">
+                            <div class="dropdown font-sans-serif">
+                                <button class="btn btn-link text-600 btn-sm dropdown-toggle" type="button" id="dropdown-{{ user.pk }}" data-bs-toggle="dropdown" data-boundary="viewport" aria-haspopup="true" aria-expanded="false">
+                                    <span class="fas fa-ellipsis-h fs--1"></span>
+                                </button>
+                                <div class="dropdown-menu dropdown-menu-end border py-0" aria-labelledby="dropdown-{{ user.pk }}">
+                                    <div class="bg-white py-2">
+                                        <a class="dropdown-item" href="{% url 'users:user_detail' user.unique_id %}">
+                                            <span class="fas fa-eye me-2 text-primary"></span>{% trans "Voir" %}
+                                        </a>
+                                        <a class="dropdown-item" href="{% url 'users:user_edit' user.unique_id %}">
+                                            <span class="fas fa-edit me-2 text-info"></span>{% trans "Modifier" %}
+                                        </a>
+                                        <div class="dropdown-divider"></div>
+                                        <a class="dropdown-item text-danger" href="{% url 'users:user_delete' user.unique_id %}">
+                                            <span class="fas fa-trash me-2"></span>{% trans "Supprimer" %}
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center py-4">{% trans "Aucun utilisateur trouvé." %}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
-        {% block help_content %}
-        <h5>Users — Help</h5>
-        <p class="fs--1">This page lists all users. Use <strong>Add user</strong> to create a new account. Use <strong>View</strong> to see user details, <strong>Edit</strong> to modify, and <strong>Delete</strong> to remove a user.</p>
-        {% endblock %}
 
-        {% endblock %}
+{% block help_content %}
+<div class="mt-4 p-4 bg-light rounded">
+    <h5>{% trans "Utilisateurs — Aide" %}</h5>
+    <p class="fs--1">{% trans "Cette page gère tous les utilisateurs du système. Utilisez " %}<strong>{% trans "Ajouter un Utilisateur" %}</strong>{% trans " pour créer un nouveau compte. Utilisez les actions du menu pour voir, modifier ou supprimer un utilisateur." %}</p>
+</div>
+{% endblock %}
+
+{% endblock %}

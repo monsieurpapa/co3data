@@ -37,7 +37,7 @@ class UserAdminTests(TestCase):
         user = User.objects.get(username='newuser')
 
         # update via view
-        update_url = reverse('users:user_edit', args=[user.pk])
+        update_url = reverse('users:user_edit', args=[user.unique_id])
         response = self.client.post(update_url, {
             'username': 'newuser',
             'password': 'secret',
@@ -50,13 +50,13 @@ class UserAdminTests(TestCase):
         self.assertEqual(user.email, 'changed@example.com')
 
         # detail view should show the updated email
-        detail_url = reverse('users:user_detail', args=[user.pk])
+        detail_url = reverse('users:user_detail', args=[user.unique_id])
         resp = self.client.get(detail_url)
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, 'changed@example.com')
 
         # delete via view
-        delurl = reverse('users:user_delete', args=[user.pk])
+        delurl = reverse('users:user_delete', args=[user.unique_id])
         response = self.client.post(delurl)
         self.assertEqual(response.status_code, 302)
         self.assertFalse(User.objects.filter(username='newuser').exists())

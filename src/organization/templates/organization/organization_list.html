@@ -1,34 +1,73 @@
 {% extends 'base.html' %}
-{% block title %}Organizations | Admin{% endblock %}
+{% load i18n %}
+{% block title %}{% trans "Organisations" %} | {% trans "Admin" %}{% endblock %}
 
 {% block content %}
-<div class="container">
-    <h2>Organizations</h2>
-    <a href="{% url 'organization:organization_add' %}" class="btn btn-primary mb-2">Add organization</a>
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>Name</th>
-                <th>Unique Code</th>
-                <th>Active</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for org in organizations %}
-            <tr>
-                <td>{{ org.name }}</td>
-                <td>{{ org.unique_code }}</td>
-                <td>{{ org.is_active }}</td>
-                <td>
-                    <a href="{% url 'organization:organization_edit' org.pk %}" class="btn btn-sm btn-secondary">Edit</a>
-                    <a href="{% url 'organization:organization_delete' org.pk %}" class="btn btn-sm btn-danger">Delete</a>
-                </td>
-            </tr>
-            {% empty %}
-            <tr><td colspan="4">No organizations.</td></tr>
-            {% endfor %}
-        </tbody>
-    </table>
+<div class="card mb-3">
+    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">{% trans "Gestion des Organisations" %}</h5>
+        <a href="{% url 'organization:organization_add' %}" class="btn btn-falcon-primary btn-sm">
+            <span class="fas fa-plus me-1"></span>{% trans "Nouvelle Organisation" %}
+        </a>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive scrollbar">
+            <table class="table table-sm table-striped fs--1 mb-0 overflow-hidden">
+                <thead class="bg-200 text-900">
+                    <tr>
+                        <th class="align-middle">{% trans "Nom" %}</th>
+                        <th class="align-middle">{% trans "Code Unique" %}</th>
+                        <th class="align-middle">{% trans "Statut" %}</th>
+                        <th class="align-middle text-end">{% trans "Actions" %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for org in organizations %}
+                    <tr>
+                        <td class="align-middle fw-semi-bold">{{ org.name }}</td>
+                        <td class="align-middle"><span class="badge badge-soft-dark">{{ org.unique_code }}</span></td>
+                        <td class="align-middle">
+                            {% if org.is_active %}
+                            <span class="badge badge-soft-success"><span class="fas fa-check me-1"></span>{% trans "Actif" %}</span>
+                            {% else %}
+                            <span class="badge badge-soft-danger">{% trans "Inactif" %}</span>
+                            {% endif %}
+                        </td>
+                        <td class="align-middle text-end">
+                            <div class="dropdown font-sans-serif">
+                                <button class="btn btn-link text-600 btn-sm dropdown-toggle" type="button" id="dropdown-{{ org.uuid }}" data-bs-toggle="dropdown" data-boundary="viewport" aria-haspopup="true" aria-expanded="false">
+                                    <span class="fas fa-ellipsis-h fs--1"></span>
+                                </button>
+                                <div class="dropdown-menu dropdown-menu-end border py-0" aria-labelledby="dropdown-{{ org.uuid }}">
+                                    <div class="bg-white py-2">
+                                        <a class="dropdown-item" href="{% url 'organization:organization_edit' org.uuid %}">
+                                            <span class="fas fa-edit me-2 text-info"></span>{% trans "Modifier" %}
+                                        </a>
+                                        <div class="dropdown-divider"></div>
+                                        <a class="dropdown-item text-danger" href="{% url 'organization:organization_delete' org.uuid %}">
+                                            <span class="fas fa-trash me-2"></span>{% trans "Supprimer" %}
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-center py-4">{% trans "Aucune organisation trouvée." %}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
+
+{% block help_content %}
+<div class="mt-4 p-4 bg-light rounded">
+    <h5>{% trans "Organisations — Aide" %}</h5>
+    <p class="fs--1">{% trans "Gérez toutes les organisations du système. Utilisez " %}<strong>{% trans "Nouvelle Organisation" %}</strong>{% trans " pour ajouter une nouvelle organisation. Utilisez les actions pour voir les détails, modifier, ou supprimer une organisation." %}</p>
+</div>
+{% endblock %}
+
 {% endblock %}

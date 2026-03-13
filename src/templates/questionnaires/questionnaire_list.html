@@ -11,13 +11,13 @@
     <div class="card-header bg-light d-flex justify-content-between align-items-center">
         <h5 class="mb-0">{% trans "Questionnaires Disponibles" %}</h5>
         <div class="col-auto">
-            {% if user.role in 'admin,regional_officer,manager' %}
+            {% if user.role in 'admin,regional_officer,manager' or user.is_superuser %}
             <a href="{% url 'questionnaires:submission_list' %}" class="btn btn-falcon-default btn-sm me-2">
                 <span class="fas fa-list me-1"></span>{% trans "Voir les Soumissions" %}
             </a>
             {% endif %}
-            {% if user.role == 'admin' %}
-            <a href="{% url 'admin:questionnaires_questionnaire_add' %}" class="btn btn-falcon-primary btn-sm">
+            {% if user.role == 'admin' or user.is_superuser %}
+            <a href="{% url 'questionnaires:questionnaire_add' %}" class="btn btn-falcon-primary btn-sm">
                 <span class="fas fa-plus me-1"></span>{% trans "Nouveau Questionnaire" %}
             </a>
             {% endif %}
@@ -39,7 +39,7 @@
                     {% for q in questionnaires %}
                     <tr>
                         <td class="align-middle fw-semi-bold">{{ q.title }}</td>
-                        <td class="align-middle">{{ q.target_model|title }}</td>
+                        <td class="align-middle"><span class="badge badge-soft-primary">{{ q.get_target_model_display }}</span></td>
                         <td class="align-middle">{{ q.questions.count }}</td>
                         <td class="align-middle">
                             {% if q.is_active %}
@@ -49,12 +49,23 @@
                             {% endif %}
                         </td>
                         <td class="align-middle text-end">
-                            <a href="{% url 'questionnaires:questionnaire_detail' q.pk %}" class="btn btn-link p-0" title="{% trans 'Voir' %}"><span class="fas fa-eye"></span></a>
-                            {% if user.is_superuser %}
-                            <a href="{% url 'admin:questionnaires_questionnaire_change' q.pk %}" class="btn btn-link p-0 ms-2" title="{% trans 'Modifier (admin)' %}">
-                                <span class="fas fa-edit"></span>
-                            </a>
-                            {% endif %}
+                            <div class="dropdown font-sans-serif">
+                                <button class="btn btn-link text-600 btn-sm dropdown-toggle" type="button" id="dropdown-{{ q.unique_id }}" data-bs-toggle="dropdown" data-boundary="viewport" aria-haspopup="true" aria-expanded="false">
+                                    <span class="fas fa-ellipsis-h fs--1"></span>
+                                </button>
+                                <div class="dropdown-menu dropdown-menu-end border py-0" aria-labelledby="dropdown-{{ q.unique_id }}">
+                                    <div class="bg-white py-2">
+                                        <a class="dropdown-item" href="{% url 'questionnaires:questionnaire_detail' q.unique_id %}">
+                                            <span class="fas fa-eye me-2 text-primary"></span>{% trans "Voir" %}
+                                        </a>
+                                        {% if user.is_superuser %}
+                                        <a class="dropdown-item" href="{% url 'admin:questionnaires_questionnaire_change' q.pk %}">
+                                            <span class="fas fa-edit me-2 text-info"></span>{% trans "Modifier" %}
+                                        </a>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
                         </td>
                     </tr>
                     {% empty %}

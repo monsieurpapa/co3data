@@ -1,0 +1,115 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Enregistrements Financiers" %} | CO3DATA{% endblock %}
+
+{% block breadcrumb %}
+    <li class="breadcrumb-item"><a href="{% url 'analytics:dashboard' %}">{% trans "Accueil" %}</a></li>
+    <li class="breadcrumb-item active" aria-current="page">{% trans "Enregistrements Financiers" %}</li>
+{% endblock %}
+
+{% block content %}
+<div class="card mb-3">
+    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">{% trans "Enregistrements Financiers" %}</h5>
+        {% if user.profile.role.name in 'admin,manager,accountant' or user.is_superuser %}
+        <a href="{% url 'cooperatives:financial_record_add' %}" class="btn btn-falcon-primary btn-sm">
+            <span class="fas fa-plus me-1"></span>{% trans "Nouvel Enregistrement" %}
+        </a>
+        {% endif %}
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive scrollbar">
+            <table class="table table-sm table-striped fs--1 mb-0 overflow-hidden">
+                <thead class="bg-200 text-900">
+                    <tr>
+                        <th class="align-middle">{% trans "Coopérative" %}</th>
+                        <th class="align-middle">{% trans "Date" %}</th>
+                        <th class="align-middle">{% trans "Type" %}</th>
+                        <th class="align-middle">{% trans "Description" %}</th>
+                        <th class="align-middle text-end">{% trans "Montant" %}</th>
+                        <th class="align-middle text-end">{% trans "Actions" %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in financial_records %}
+                    <tr>
+                        <td class="align-middle fw-semi-bold">{{ record.cooperative.name }}</td>
+                        <td class="align-middle">{{ record.transaction_date|date:"d/m/Y" }}</td>
+                        <td class="align-middle">
+                            <span class="badge {% if record.transaction_type == 'income' %}badge-soft-success{% elif record.transaction_type == 'expense' %}badge-soft-danger{% else %}badge-soft-warning{% endif %}">
+                                {{ record.get_transaction_type_display }}
+                            </span>
+                        </td>
+                        <td class="align-middle">
+                            <span class="d-inline-block text-truncate" style="max-width: 150px;" title="{{ record.description }}">
+                                {{ record.description|default:"-" }}
+                            </span>
+                        </td>
+                        <td class="align-middle text-end fw-semi-bold">
+                            <span class="{% if record.transaction_type == 'income' %}text-success{% elif record.transaction_type == 'expense' %}text-danger{% else %}text-warning{% endif %}">
+                                {{ record.amount|floatformat:2 }}
+                            </span>
+                        </td>
+                        <td class="align-middle text-end">
+                            <div class="dropdown font-sans-serif">
+                                <button class="btn btn-link text-600 btn-sm dropdown-toggle btn-reveal" type="button" id="dropdown-{{ record.unique_id }}" data-bs-toggle="dropdown" data-boundary="viewport" aria-haspopup="true" aria-expanded="false">
+                                    <span class="fas fa-ellipsis-h fs--1"></span>
+                                </button>
+                                <div class="dropdown-menu dropdown-menu-end border py-0" aria-labelledby="dropdown-{{ record.unique_id }}">
+                                    <div class="bg-white py-2">
+                                        <a class="dropdown-item" href="{% url 'cooperatives:financial_record_detail' record.unique_id %}">
+                                            <span class="fas fa-eye me-2 text-primary"></span>{% trans "Voir" %}
+                                        </a>
+                                        {% if user.profile.role.name in 'admin,manager,accountant' or user.is_superuser %}
+                                        <a class="dropdown-item" href="{% url 'cooperatives:financial_record_edit' record.unique_id %}">
+                                            <span class="fas fa-edit me-2 text-info"></span>{% trans "Modifier" %}
+                                        </a>
+                                        {% endif %}
+                                        {% if user.profile.role.name in 'admin,manager' or user.is_superuser %}
+                                        <div class="dropdown-divider"></div>
+                                        <a class="dropdown-item text-danger" href="{% url 'cooperatives:financial_record_delete' record.unique_id %}">
+                                            <span class="fas fa-trash me-2"></span>{% trans "Supprimer" %}
+                                        </a>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center py-4">{% trans "Aucun enregistrement financier trouvé." %}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% if is_paginated %}
+    <div class="card-footer bg-light d-flex justify-content-center">
+        <ul class="pagination pagination-sm mb-0">
+            {% if page_obj.has_previous %}
+            <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">&laquo;</a></li>
+            {% else %}
+            <li class="page-item disabled"><span class="page-link">&laquo;</span></li>
+            {% endif %}
+            
+            {% for i in page_obj.paginator.page_range %}
+                {% if page_obj.number == i %}
+                <li class="page-item active"><span class="page-link">{{ i }}</span></li>
+                {% else %}
+                <li class="page-item"><a class="page-link" href="?page={{ i }}">{{ i }}</a></li>
+                {% endif %}
+            {% endfor %}
+            
+            {% if page_obj.has_next %}
+            <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">&raquo;</a></li>
+            {% else %}
+            <li class="page-item disabled"><span class="page-link">&raquo;</span></li>
+            {% endif %}
+        </ul>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

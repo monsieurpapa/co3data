@@ -3,7 +3,10 @@ from django.utils.translation import gettext_lazy as _
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 
+import uuid
+
 class Questionnaire(models.Model):
+    unique_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, db_index=True)
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
     created_by = models.ForeignKey("users.User", on_delete=models.SET_NULL, null=True, blank=True)
@@ -12,8 +15,17 @@ class Questionnaire(models.Model):
     TARGET_MODEL_CHOICES = (
         ("cooperative", _("Cooperative")),
         ("member", _("Member")),
+        ("user", _("User")),
+        ("financial_record", _("Financial Record")),
+        ("production", _("Production Record")),
     )
     target_model = models.CharField(max_length=50, choices=TARGET_MODEL_CHOICES, default="cooperative")
+    cooperatives = models.ManyToManyField(
+        "cooperatives.Cooperative",
+        blank=True,
+        related_name="questionnaires",
+        help_text=_("If filled, this questionnaire will apply only to the selected cooperatives."),
+    )
 
     class Meta:
         verbose_name = _("Questionnaire")
@@ -47,6 +59,7 @@ class Question(models.Model):
         return self.text
 
 class Submission(models.Model):
+    unique_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, db_index=True)
     questionnaire = models.ForeignKey(Questionnaire, on_delete=models.CASCADE, related_name="submissions")
     submitted_by = models.ForeignKey("users.User", on_delete=models.SET_NULL, null=True, blank=True)
     submitted_at = models.DateTimeField(auto_now_add=True)
