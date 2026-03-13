@@ -143,9 +143,9 @@ Bien que le système de base soit entièrement fonctionnel, les fonctionnalités
 Le système CO3DATA est plus qu'une base de données; c'est un outil fondateur pour la transformation de l'agriculture africaine centrale. Avec les améliorations récentes incluant la gestion des certificats, les analyses de ventes et les tableaux de bord interactifs, CO3DATA est désormais une plateforme complète d'intelligence métier pour les coopératives. Nous invitons le Centre du Commerce International à s'associer avec nous dans le financement de cette initiative, assurant que les petits agriculteurs africains centraux ne soient pas laissés pour compte dans l'ère numérique.
 
 **Informations de Contact:**
-[Nom d'Utilisateur/Organisation]
-[Adresse Email]
-[Numéro de Téléphone]
+Dieudonne Munganga
+dieudonneishara@gmail.com
++243 972 192 876
 
 ---
 
