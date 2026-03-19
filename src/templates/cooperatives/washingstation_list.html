@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block breadcrumb %}
+  <li class="breadcrumb-item"><a href="{% url 'analytics:dashboard' %}">{% trans "Accueil" %}</a></li>
+  <li class="breadcrumb-item active" aria-current="page">{% trans "Stations de lavage" %}</li>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0">{% trans "Stations de lavage" %}</h2>
+    {% if user.role in 'admin,regional_officer,manager' %}
+    <a href="{% url 'cooperatives:washing_station_add' %}" class="btn btn-primary">
+      <span class="fas fa-plus me-1"></span>{% trans "Ajouter une nouvelle station" %}
+    </a>
+    {% endif %}
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-striped align-middle">
+      <thead>
+        <tr>
+          <th>{% trans "Nom" %}</th>
+          <th>{% trans "Coopérative" %}</th>
+          <th>{% trans "Village" %}</th>
+          <th>{% trans "Statut" %}</th>
+          <th class="text-end">{% trans "Actions" %}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in stations %}
+        <tr>
+          <td>
+            <a class="fw-semibold" href="{% url 'cooperatives:washing_station_detail' s.unique_id %}">
+              {{ s.name }}
+            </a>
+          </td>
+          <td>{{ s.cooperative.name }}</td>
+          <td>{{ s.village|default:"—" }}</td>
+          <td>
+            {% if s.is_active %}
+              <span class="badge bg-success">{% trans "Active" %}</span>
+            {% else %}
+              <span class="badge bg-secondary">{% trans "Inactive" %}</span>
+            {% endif %}
+          </td>
+          <td class="text-end">
+            <a href="{% url 'cooperatives:washing_station_detail' s.unique_id %}" class="btn btn-sm btn-outline-primary" title="{% trans 'Voir' %}">
+              <span class="fas fa-eye me-1"></span>{% trans "Voir" %}
+            </a>
+            {% if user.role in 'admin,regional_officer,manager' %}
+            <a href="{% url 'cooperatives:washing_station_edit' s.unique_id %}" class="btn btn-sm btn-outline-secondary ms-1" title="{% trans 'Modifier' %}">
+              <span class="fas fa-edit me-1"></span>{% trans "Modifier" %}
+            </a>
+            <a href="{% url 'cooperatives:washing_station_delete' s.unique_id %}" class="btn btn-sm btn-outline-danger ms-1" title="{% trans 'Supprimer' %}">
+              <span class="fas fa-trash-alt me-1"></span>{% trans "Supprimer" %}
+            </a>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="5" class="text-center text-muted py-4">{% trans "Aucune station trouvée." %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if is_paginated %}
+  <nav class="mt-3" aria-label="{% trans 'Pagination' %}">
+    <ul class="pagination pagination-sm mb-0 justify-content-center">
+      {% if page_obj.has_previous %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ page_obj.previous_page_number }}">&laquo;</a>
+      </li>
+      {% else %}
+      <li class="page-item disabled"><span class="page-link">&laquo;</span></li>
+      {% endif %}
+
+      {% for i in paginator.page_range %}
+        {% if page_obj.number == i %}
+        <li class="page-item active"><span class="page-link">{{ i }}</span></li>
+        {% else %}
+        <li class="page-item"><a class="page-link" href="?page={{ i }}">{{ i }}</a></li>
+        {% endif %}
+      {% endfor %}
+
+      {% if page_obj.has_next %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ page_obj.next_page_number }}">&raquo;</a>
+      </li>
+      {% else %}
+      <li class="page-item disabled"><span class="page-link">&raquo;</span></li>
+      {% endif %}
+    </ul>
+  </nav>
+  {% endif %}
+</div>
+{% endblock %}
+

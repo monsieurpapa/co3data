@@ -11,6 +11,7 @@ from .models import (
     Member,
     ProductionRecord,
     FinancialRecord,
+    WashingStation,
     Buyer,
     CooperativeCertificate,
     CooperativeSale,
@@ -22,6 +23,7 @@ from .forms import (
     ProductionRecordForm,
     FinancialRecordForm,
     BuyerForm,
+    WashingStationForm,
     CooperativeCertificateForm,
     CooperativeSaleForm,
 )
@@ -576,3 +578,97 @@ class CooperativeSaleDeleteView(RegionalAccessMixin, RoleRequiredMixin, DeleteVi
 
     def get_success_url(self):
         return reverse_lazy('cooperatives:cooperative_detail', kwargs={'uuid': self.object.cooperative.unique_id})
+
+
+# =============================================================================
+# WASHING STATIONS
+# =============================================================================
+
+class WashingStationListView(RegionalAccessMixin, RoleRequiredMixin, ListView):
+    model = WashingStation
+    template_name = "cooperatives/washingstation_list.html"
+    context_object_name = "stations"
+    paginate_by = 20
+    required_roles = ["admin", "regional_officer", "manager", "station_chef", "supervisor"]
+
+    def get_queryset(self):
+        qs = WashingStation.objects.select_related("cooperative").order_by("cooperative__name", "name")
+        user = self.request.user
+        if user.is_superuser:
+            return qs
+        if not getattr(user, "region", None):
+            return qs.none()
+        return qs.filter(cooperative__region=user.region)
+
+
+class WashingStationDetailView(RegionalAccessMixin, RoleRequiredMixin, DetailView):
+    model = WashingStation
+    template_name = "cooperatives/washingstation_detail.html"
+    context_object_name = "station"
+    required_roles = ["admin", "regional_officer", "manager", "station_chef", "supervisor"]
+    slug_field = "unique_id"
+    slug_url_kwarg = "uuid"
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        user = self.request.user
+        if user.is_superuser:
+            return qs
+        if not getattr(user, "region", None):
+            return qs.none()
+        return qs.filter(cooperative__region=user.region)
+
+
+class WashingStationCreateView(RegionalAccessMixin, RoleRequiredMixin, CreateView):
+    model = WashingStation
+    form_class = WashingStationForm
+    template_name = "cooperatives/washingstation_form.html"
+    success_url = reverse_lazy("cooperatives:washing_station_list")
+    required_roles = ["admin", "regional_officer", "manager"]
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["user"] = self.request.user
+        return kwargs
+
+
+class WashingStationUpdateView(RegionalAccessMixin, RoleRequiredMixin, UpdateView):
+    model = WashingStation
+    form_class = WashingStationForm
+    template_name = "cooperatives/washingstation_form.html"
+    success_url = reverse_lazy("cooperatives:washing_station_list")
+    required_roles = ["admin", "regional_officer", "manager"]
+    slug_field = "unique_id"
+    slug_url_kwarg = "uuid"
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        user = self.request.user
+        if user.is_superuser:
+            return qs
+        if not getattr(user, "region", None):
+            return qs.none()
+        return qs.filter(cooperative__region=user.region)
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["user"] = self.request.user
+        return kwargs
+
+
+class WashingStationDeleteView(RegionalAccessMixin, RoleRequiredMixin, DeleteView):
+    model = WashingStation
+    template_name = "cooperatives/washingstation_confirm_delete.html"
+    success_url = reverse_lazy("cooperatives:washing_station_list")
+    required_roles = ["admin", "regional_officer", "manager"]
+    slug_field = "unique_id"
+    slug_url_kwarg = "uuid"
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        user = self.request.user
+        if user.is_superuser:
+            return qs
+        if not getattr(user, "region", None):
+            return qs.none()
+        return qs.filter(cooperative__region=user.region)

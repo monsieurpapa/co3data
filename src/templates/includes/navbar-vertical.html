@@ -56,26 +56,46 @@
                 <!-- ============================================================ -->
                 <li class="nav-divider">{% trans "Opérations" %}</li>
 
-                <!-- Cooperatives -->
+                <!-- Cooperatives & Members (dropdown) -->
                 <li class="nav-item">
-                    <a class="nav-link {% if app_name == 'cooperatives' and 'cooperative' in url_name %}active{% endif %}"
-                        href="{% url 'cooperatives:cooperative_list' %}" role="button">
+                    <a class="nav-link {% if app_name == 'cooperatives' %}active{% endif %} d-flex align-items-center justify-content-between"
+                        href="#" id="coopDropdown" data-bs-toggle="collapse" data-bs-target="#coopMenu"
+                        aria-expanded="{% if app_name == 'cooperatives' %}true{% else %}false{% endif %}"
+                        aria-controls="coopMenu" role="button">
                         <div class="d-flex align-items-center">
                             <span class="nav-link-icon"><span class="fas fa-university fs-1"></span></span>
-                            <span class="nav-link-text ps-1">{% trans "Coopératives" %}</span>
+                            <span class="nav-link-text ps-1">{% trans "Coopératives & Membres" %}</span>
                         </div>
+                        <span class="ms-auto fas fa-chevron-right fs--1"></span>
                     </a>
-                </li>
-
-                <!-- Members -->
-                <li class="nav-item">
-                    <a class="nav-link {% if app_name == 'cooperatives' and 'member' in url_name %}active{% endif %}"
-                        href="{% url 'cooperatives:member_list' %}" role="button">
-                        <div class="d-flex align-items-center">
-                            <span class="nav-link-icon"><span class="fas fa-users fs-1"></span></span>
-                            <span class="nav-link-text ps-1">{% trans "Membres" %}</span>
-                        </div>
-                    </a>
+                    <div id="coopMenu" class="collapse {% if app_name == 'cooperatives' %}show{% endif %}">
+                        <ul class="nav flex-column ms-3">
+                            <li class="nav-item">
+                                <a class="nav-link {% if app_name == 'cooperatives' and 'cooperative' in url_name %}active{% endif %}"
+                                   href="{% url 'cooperatives:cooperative_list' %}">
+                                    {% trans "Liste des coopératives" %}
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {% if app_name == 'cooperatives' and 'member' in url_name %}active{% endif %}"
+                                   href="{% url 'cooperatives:member_list' %}">
+                                    {% trans "Liste des membres" %}
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {% if app_name == 'cooperatives' and 'cherry_delivery' in url_name %}active{% endif %}"
+                                   href="{% url 'cooperatives:cherry_delivery_list' %}">
+                                    {% trans "Livraisons de cerises" %}
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {% if app_name == 'cooperatives' and 'washing_station' in url_name %}active{% endif %}"
+                                   href="{% url 'cooperatives:washing_station_list' %}">
+                                    {% trans "Stations de lavage" %}
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
                 </li>
 
                 <!-- ============================================================ -->
@@ -84,15 +104,33 @@
                 <li class="nav-divider">{% trans "Collecte de Données" %}</li>
 
                 <li class="nav-item">
-                    <a class="nav-link {% if app_name == 'questionnaires' %}active{% endif %}"
-                        href="{% url 'questionnaires:questionnaire_list' %}" role="button">
+                    <a class="nav-link {% if app_name == 'questionnaires' %}active{% endif %} d-flex align-items-center justify-content-between"
+                       href="#" id="dataCollectionDropdown" data-bs-toggle="collapse" data-bs-target="#dataCollectionMenu"
+                       aria-expanded="{% if app_name == 'questionnaires' %}true{% else %}false{% endif %}"
+                       aria-controls="dataCollectionMenu" role="button">
                         <div class="d-flex align-items-center">
                             <span class="nav-link-icon"><span class="fas fa-clipboard-list fs-1"></span></span>
-                            <span class="nav-link-text ps-1">{% trans "Questionnaires" %}</span>
+                            <span class="nav-link-text ps-1">{% trans "Questionnaires & Données" %}</span>
                         </div>
+                        <span class="ms-auto fas fa-chevron-right fs--1"></span>
                     </a>
+                    <div id="dataCollectionMenu" class="collapse {% if app_name == 'questionnaires' %}show{% endif %}">
+                        <ul class="nav flex-column ms-3">
+                            <li class="nav-item">
+                                <a class="nav-link {% if app_name == 'questionnaires' and 'questionnaire' in url_name %}active{% endif %}"
+                                   href="{% url 'questionnaires:questionnaire_list' %}">
+                                    {% trans "Liste des questionnaires" %}
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {% if app_name == 'questionnaires' and 'submission' in url_name %}active{% endif %}"
+                                   href="{% url 'questionnaires:submission_list' %}">
+                                    {% trans "Soumissions de données" %}
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
                 </li>
-
                 <!-- ============================================================ -->
                 <!-- SYSTEM -->
                 <!-- ============================================================ -->
@@ -110,7 +148,7 @@
 
                 {% if user.is_superuser %}
                 <li class="nav-item">
-                    <a class="nav-link dropdown-toggle {% if app_name == 'users' %}active{% endif %}"
+                    <a class="nav-link {% if app_name == 'users' %}active{% endif %} d-flex align-items-center justify-content-between"
                         href="#" id="adminDropdown" data-bs-toggle="collapse" data-bs-target="#adminMenu"
                         aria-expanded="{% if app_name == 'users' %}true{% else %}false{% endif %}"
                         aria-controls="adminMenu">
@@ -118,6 +156,7 @@
                             <span class="nav-link-icon"><span class="fas fa-user-shield fs-1"></span></span>
                             <span class="nav-link-text ps-1">{% trans "Utilisateurs" %}</span>
                         </div>
+                        <span class="ms-auto fas fa-chevron-right fs--1"></span>
                     </a>
                     <div id="adminMenu" class="collapse {% if app_name == 'users' %}show{% endif %}">
                         <ul class="nav flex-column ms-3">

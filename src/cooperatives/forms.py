@@ -269,6 +269,38 @@ class BuyerForm(forms.ModelForm):
         }
 
 
+class WashingStationForm(forms.ModelForm):
+    class Meta:
+        model = WashingStation
+        fields = ["cooperative", "name", "village", "latitude", "longitude", "is_active"]
+        widgets = {
+            "cooperative": forms.Select(attrs={"class": "form-select"}),
+            "name": forms.TextInput(attrs={"class": "form-control"}),
+            "village": forms.TextInput(attrs={"class": "form-control"}),
+            "latitude": forms.NumberInput(attrs={"class": "form-control", "step": "0.000001"}),
+            "longitude": forms.NumberInput(attrs={"class": "form-control", "step": "0.000001"}),
+            "is_active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+        }
+        labels = {
+            "cooperative": _("Coopérative"),
+            "name": _("Nom de la station"),
+            "village": _("Village"),
+            "latitude": _("Latitude"),
+            "longitude": _("Longitude"),
+            "is_active": _("Active"),
+        }
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop("user", None)
+        super().__init__(*args, **kwargs)
+        if user is not None and not getattr(user, "is_superuser", False):
+            region = getattr(user, "region", None)
+            if region:
+                self.fields["cooperative"].queryset = Cooperative.objects.filter(region=region).order_by("name")
+            else:
+                self.fields["cooperative"].queryset = Cooperative.objects.none()
+
+
 class CooperativeCertificateForm(forms.ModelForm):
     class Meta:
         model = CooperativeCertificate

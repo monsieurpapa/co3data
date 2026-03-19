@@ -45,6 +45,13 @@ urlpatterns = [
     path("buyers/<uuid:uuid>/edit/", views.BuyerUpdateView.as_view(), name="buyer_edit"),
     path("buyers/<uuid:uuid>/delete/", views.BuyerDeleteView.as_view(), name="buyer_delete"),
 
+    # Washing Stations
+    path("washing-stations/", views.WashingStationListView.as_view(), name="washing_station_list"),
+    path("washing-stations/add/", views.WashingStationCreateView.as_view(), name="washing_station_add"),
+    path("washing-stations/<uuid:uuid>/", views.WashingStationDetailView.as_view(), name="washing_station_detail"),
+    path("washing-stations/<uuid:uuid>/edit/", views.WashingStationUpdateView.as_view(), name="washing_station_edit"),
+    path("washing-stations/<uuid:uuid>/delete/", views.WashingStationDeleteView.as_view(), name="washing_station_delete"),
+
     # Cooperative Certificates
     path("<uuid:uuid>/certificates/", views.CooperativeCertificateListView.as_view(), name="cooperative_certificate_list"),
     path("<uuid:uuid>/certificates/add/", views.CooperativeCertificateCreateView.as_view(), name="cooperative_certificate_add"),

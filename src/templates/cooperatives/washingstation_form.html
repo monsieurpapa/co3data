@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block breadcrumb %}
+  <li class="breadcrumb-item"><a href="{% url 'analytics:dashboard' %}">{% trans "Accueil" %}</a></li>
+  <li class="breadcrumb-item"><a href="{% url 'cooperatives:washing_station_list' %}">{% trans "Stations de lavage" %}</a></li>
+  <li class="breadcrumb-item active" aria-current="page">
+    {% if object %}{% trans "Modifier" %}{% else %}{% trans "Nouveau" %}{% endif %}
+  </li>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0">
+      {% if object %}{% trans "Modifier la station" %}{% else %}{% trans "Nouvelle station de lavage" %}{% endif %}
+    </h2>
+    <a href="{% url 'cooperatives:washing_station_list' %}" class="btn btn-outline-secondary">
+      {% trans "Retour" %}
+    </a>
+  </div>
+
+  <form method="post" novalidate class="card">
+    {% csrf_token %}
+    <div class="card-body">
+      {% if form.non_field_errors %}
+      <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+      {% endif %}
+
+      <div class="row g-3">
+        <div class="col-md-6">
+          {{ form.cooperative.label_tag }}
+          {{ form.cooperative }}
+          {{ form.cooperative.errors }}
+        </div>
+        <div class="col-md-6">
+          {{ form.name.label_tag }}
+          {{ form.name }}
+          {{ form.name.errors }}
+        </div>
+        <div class="col-md-6">
+          {{ form.village.label_tag }}
+          {{ form.village }}
+          {{ form.village.errors }}
+        </div>
+        <div class="col-md-3">
+          {{ form.latitude.label_tag }}
+          {{ form.latitude }}
+          {{ form.latitude.errors }}
+        </div>
+        <div class="col-md-3">
+          {{ form.longitude.label_tag }}
+          {{ form.longitude }}
+          {{ form.longitude.errors }}
+        </div>
+        <div class="col-md-6">
+          <div class="form-check mt-4">
+            {{ form.is_active }}
+            <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+              {% trans "Active" %}
+            </label>
+            {{ form.is_active.errors }}
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-footer text-end">
+      <button type="submit" class="btn btn-primary">
+        {% trans "Enregistrer" %}
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}
+

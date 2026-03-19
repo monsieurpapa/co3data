@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block breadcrumb %}
+  <li class="breadcrumb-item"><a href="{% url 'analytics:dashboard' %}">{% trans "Accueil" %}</a></li>
+  <li class="breadcrumb-item"><a href="{% url 'cooperatives:washing_station_list' %}">{% trans "Stations de lavage" %}</a></li>
+  <li class="breadcrumb-item active" aria-current="page">{{ station.name }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0">{{ station.name }}</h2>
+    <div>
+      <a href="{% url 'cooperatives:washing_station_list' %}" class="btn btn-outline-secondary">
+        {% trans "Retour" %}
+      </a>
+      {% if user.role in 'admin,regional_officer,manager' %}
+      <a href="{% url 'cooperatives:washing_station_edit' station.unique_id %}" class="btn btn-outline-primary ms-1">
+        {% trans "Modifier" %}
+      </a>
+      <a href="{% url 'cooperatives:washing_station_delete' station.unique_id %}" class="btn btn-outline-danger ms-1">
+        {% trans "Supprimer" %}
+      </a>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-body">
+      <dl class="row mb-0">
+        <dt class="col-sm-3">{% trans "Coopérative" %}</dt>
+        <dd class="col-sm-9">{{ station.cooperative.name }}</dd>
+
+        <dt class="col-sm-3">{% trans "Village" %}</dt>
+        <dd class="col-sm-9">{{ station.village|default:"—" }}</dd>
+
+        <dt class="col-sm-3">{% trans "Latitude" %}</dt>
+        <dd class="col-sm-9">{{ station.latitude|default:"—" }}</dd>
+
+        <dt class="col-sm-3">{% trans "Longitude" %}</dt>
+        <dd class="col-sm-9">{{ station.longitude|default:"—" }}</dd>
+
+        <dt class="col-sm-3">{% trans "Statut" %}</dt>
+        <dd class="col-sm-9">
+          {% if station.is_active %}
+            <span class="badge bg-success">{% trans "Active" %}</span>
+          {% else %}
+            <span class="badge bg-secondary">{% trans "Inactive" %}</span>
+          {% endif %}
+        </dd>
+      </dl>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
