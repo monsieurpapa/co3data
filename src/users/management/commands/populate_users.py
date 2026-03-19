@@ -1,8 +1,7 @@
 import json
 from django.core.management.base import BaseCommand
-from django.contrib.auth.models import User
-from users.models import Role, UserProfile
-from organization.models import Organization
+from users.models import User
+from cooperatives.models import Cooperative
 
 
 class Command(BaseCommand):
@@ -42,25 +41,23 @@ class Command(BaseCommand):
                 user.set_password(pw)
             user.is_staff = item.get('is_staff', False)
             user.is_active = item.get('is_active', True)
-            user.save()
-
-            profile, _ = UserProfile.objects.get_or_create(user=user)
-            org_value = item.get('organization')
-            if org_value:
-                try:
-                    if isinstance(org_value, int):
-                        org = Organization.objects.get(pk=org_value)
-                    else:
-                        org = Organization.objects.get(unique_code=org_value)
-                    profile.organization = org
-                except Organization.DoesNotExist:
-                    self.stderr.write(f'Organization "{org_value}" not found for user {username}')
+            
+            # Map role
             role_value = item.get('role')
             if role_value:
+                user.role = role_value
+            
+            # Add cooperative if provided
+            coop_value = item.get('cooperative') or item.get('organization')
+            if coop_value:
                 try:
-                    profile.role = Role.objects.get(name=role_value)
-                except Role.DoesNotExist:
-                    self.stderr.write(f'Role "{role_value}" not found for user {username}')
-            profile.save()
+                    if isinstance(coop_value, int):
+                        coop = Cooperative.objects.get(pk=coop_value)
+                    else:
+                        coop = Cooperative.objects.get(name=coop_value)
+                    user.cooperative = coop
+                except Cooperative.DoesNotExist:
+                    self.stderr.write(f'Cooperative "{coop_value}" not found for user {username}')
 
+            user.save()
             self.stdout.write(f'{"Created" if created else "Updated"} user {username}')

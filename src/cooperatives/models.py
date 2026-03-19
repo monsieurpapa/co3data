@@ -34,10 +34,14 @@ class WashingStation(models.Model):
 
     cooperative = models.ForeignKey(Cooperative, on_delete=models.CASCADE, related_name="washing_stations")
     name = models.CharField(max_length=255)
+    code = models.CharField(max_length=20, blank=True, null=True)
     village = models.CharField(max_length=100, blank=True, null=True)
+    groupement = models.CharField(max_length=100, blank=True, null=True)
     latitude = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True)
     longitude = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True)
     is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True, null=True)
 
     class Meta:
         verbose_name = _("Washing Station")

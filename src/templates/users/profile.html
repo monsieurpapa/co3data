@@ -14,28 +14,50 @@
                 <div class="row">
                     <div class="col-md-3 text-center mb-3">
                         <div class="avatar avatar-5xl mb-3">
-                            <div class="avatar-name rounded-circle"><span>{{ user.username|first|upper }}</span></div>
+                            {% if user.profile_picture %}
+                                <img class="rounded-circle" src="{{ user.profile_picture.url }}" alt="" />
+                            {% else %}
+                                <div class="avatar-name rounded-circle"><span>{{ user.username|first|upper }}</span></div>
+                            {% endif %}
                         </div>
-                        <button class="btn btn-falcon-default btn-sm w-100">{% trans "Changer Photo" %}</button>
                     </div>
                     <div class="col-md-9">
-                        <form>
+                        <form method="post" enctype="multipart/form-data">
+                            {% csrf_token %}
                             <div class="row g-3">
                                 <div class="col-sm-6">
-                                    <label class="form-label" for="username">{% trans "Nom d'utilisateur" %}</label>
-                                    <input class="form-control" id="username" type="text" value="{{ user.username }}" disabled />
+                                    <label class="form-label">{% trans "Nom d'utilisateur" %}</label>
+                                    <input class="form-control" type="text" value="{{ user.username }}" disabled />
                                 </div>
                                 <div class="col-sm-6">
-                                    <label class="form-label" for="email">{% trans "Email" %}</label>
-                                    <input class="form-control" id="email" type="email" value="{{ user.email }}" disabled />
+                                    {{ form.email.label_tag }}
+                                    {{ form.email }}
+                                    {{ form.email.errors }}
                                 </div>
                                 <div class="col-sm-6">
-                                    <label class="form-label" for="first-name">{% trans "Prénom" %}</label>
-                                    <input class="form-control" id="first-name" type="text" value="{{ user.first_name }}" />
+                                    {{ form.first_name.label_tag }}
+                                    {{ form.first_name }}
+                                    {{ form.first_name.errors }}
                                 </div>
                                 <div class="col-sm-6">
-                                    <label class="form-label" for="last-name">{% trans "Nom" %}</label>
-                                    <input class="form-control" id="last-name" type="text" value="{{ user.last_name }}" />
+                                    {{ form.last_name.label_tag }}
+                                    {{ form.last_name }}
+                                    {{ form.last_name.errors }}
+                                </div>
+                                <div class="col-sm-6">
+                                    {{ form.phone_number.label_tag }}
+                                    {{ form.phone_number }}
+                                    {{ form.phone_number.errors }}
+                                </div>
+                                <div class="col-sm-6">
+                                    {{ form.preferred_language.label_tag }}
+                                    {{ form.preferred_language }}
+                                    {{ form.preferred_language.errors }}
+                                </div>
+                                <div class="col-12">
+                                    {{ form.profile_picture.label_tag }}
+                                    {{ form.profile_picture }}
+                                    {{ form.profile_picture.errors }}
                                 </div>
                                 <div class="col-12 mt-3">
                                     <button class="btn btn-falcon-primary" type="submit">{% trans "Enregistrer les modifications" %}</button>

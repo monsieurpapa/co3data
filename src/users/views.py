@@ -5,12 +5,20 @@ from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.urls import reverse_lazy
 from django.utils.translation import gettext_lazy as _
 
-from .models import User
-from .forms import UserForm, UserCreationFormCustom
+from .models import User, Region
+from .forms import UserForm, UserCreationFormCustom, UserProfileForm
 
-@login_required
-def profile(request):
-    return render(request, 'users/profile.html')
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.views.generic import UpdateView
+
+class ProfileView(LoginRequiredMixin, UpdateView):
+    model = User
+    form_class = UserProfileForm
+    template_name = "users/profile.html"
+    success_url = "/users/profile/"
+
+    def get_object(self):
+        return self.request.user
 
 class UserListView(LoginRequiredMixin, UserPassesTestMixin, ListView):
     model = User

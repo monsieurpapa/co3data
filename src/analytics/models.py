@@ -67,3 +67,20 @@ class DataQualityAlert(models.Model):
 
     def __str__(self):
         return f"Alert for {self.cooperative.name} - {self.rule.name}"
+
+class KPIResult(models.Model):
+    kpi = models.ForeignKey(KPI, on_delete=models.CASCADE, related_name="results")
+    cooperative = models.ForeignKey(Cooperative, on_delete=models.CASCADE, related_name="kpi_results")
+    period_start = models.DateField()
+    period_end = models.DateField()
+    value = models.DecimalField(max_digits=12, decimal_places=2)
+    computed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = _("KPI Result")
+        verbose_name_plural = _("KPI Results")
+        unique_together = [("kpi", "cooperative", "period_start", "period_end")]
+        ordering = ["-period_end"]
+
+    def __str__(self):
+        return f"{self.kpi.name} for {self.cooperative.name} ({self.period_end})"

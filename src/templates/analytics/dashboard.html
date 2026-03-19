@@ -131,7 +131,7 @@
 
 <div class="card mb-3">
     <div class="card-header bg-light">
-        <h5 class="mb-0">{% trans "Productions Récentes" %}</h5>
+        <h5 class="mb-0">{% trans "Productions Récentes (Générique)" %}</h5>
     </div>
     <div class="card-body p-0">
         <div class="table-responsive scrollbar">
@@ -157,6 +157,42 @@
                     {% empty %}
                     <tr>
                         <td colspan="5" class="text-center py-4">{% trans "Aucune production récente." %}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header bg-light">
+        <h5 class="mb-0">{% trans "Livraisons de Cerises Récentes" %}</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive scrollbar">
+            <table class="table table-sm table-striped fs--1 mb-0 overflow-hidden">
+                <thead class="bg-200 text-900">
+                    <tr>
+                        <th class="align-middle">{% trans "Station" %}</th>
+                        <th class="align-middle">{% trans "Membre" %}</th>
+                        <th class="align-middle">{% trans "Code Producteur" %}</th>
+                        <th class="align-middle text-end">{% trans "Quantité (kg)" %}</th>
+                        <th class="align-middle text-end">{% trans "Date" %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in recent_deliveries %}
+                    <tr>
+                        <td class="align-middle">{{ record.station.name }}</td>
+                        <td class="align-middle">{{ record.member.first_name }} {{ record.member.last_name }}</td>
+                        <td class="align-middle">{{ record.member.farmer_code }}</td>
+                        <td class="align-middle text-end">{{ record.quantity_kg }}</td>
+                        <td class="align-middle text-end">{{ record.created_at|date:"d/m/Y H:i" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center py-4">{% trans "Aucune livraison de cerises récente." %}</td>
                     </tr>
                     {% endfor %}
                 </tbody>

@@ -110,3 +110,24 @@ class UserCreationFormCustom(UserCreationForm):
             user.save()
         return user
 
+class UserProfileForm(forms.ModelForm):
+    """Form for users to update their own profile"""
+    class Meta:
+        model = User
+        fields = ['first_name', 'last_name', 'email', 'phone_number', 'profile_picture', 'preferred_language']
+        widgets = {
+            'first_name': forms.TextInput(attrs={"class": "form-control"}),
+            'last_name': forms.TextInput(attrs={"class": "form-control"}),
+            'email': forms.EmailInput(attrs={"class": "form-control"}),
+            'phone_number': forms.TextInput(attrs={"class": "form-control"}),
+            'profile_picture': forms.FileInput(attrs={"class": "form-control"}),
+            'preferred_language': forms.Select(attrs={"class": "form-select"}),
+        }
+        labels = {
+            'first_name': _("Prénom"),
+            'last_name': _("Nom"),
+            'email': _("Email"),
+            'phone_number': _("Numéro de téléphone"),
+            'profile_picture': _("Photo de profil"),
+            'preferred_language': _("Langue préférée"),
+        }

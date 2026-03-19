@@ -1,6 +1,10 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .api import CooperativeViewSet, MemberViewSet, FarmViewSet, ProductionRecordViewSet
+from .api import (
+    CooperativeViewSet, MemberViewSet, FarmViewSet, ProductionRecordViewSet,
+    WashingStationViewSet, FinancialRecordViewSet, BuyerViewSet,
+    CooperativeCertificateViewSet, CooperativeSaleViewSet
+)
 
 from . import views
 
@@ -9,6 +13,11 @@ router.register(r"cooperatives", CooperativeViewSet)
 router.register(r"members", MemberViewSet)
 router.register(r"farms", FarmViewSet)
 router.register(r"production-records", ProductionRecordViewSet)
+router.register(r"stations", WashingStationViewSet)
+router.register(r"financial-records-api", FinancialRecordViewSet)
+router.register(r"buyers-api", BuyerViewSet)
+router.register(r"certificates-api", CooperativeCertificateViewSet)
+router.register(r"sales-api", CooperativeSaleViewSet)
 
 app_name = "cooperatives"
 

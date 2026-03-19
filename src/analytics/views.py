@@ -65,7 +65,14 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         context['avg_yield'] = round(total_yield / coops_with_yield, 2) if coops_with_yield > 0 else 0
         
         # Recent production
-        context['recent_production'] = production.select_related('farm__member__cooperative').order_by('-harvest_date')[:10]
+        context['recent_production'] = production.filter(
+            record_type=ProductionRecord.RECORD_TYPE_GENERIC
+        ).select_related('farm__member__cooperative').order_by('-harvest_date')[:10]
+        
+        # Recent deliveries
+        context['recent_deliveries'] = production.filter(
+            record_type=ProductionRecord.RECORD_TYPE_CHERRY
+        ).select_related('member', 'station').order_by('-id')[:10]
         
         # Data Quality Alerts
         context['quality_alerts'] = alerts.select_related('cooperative', 'rule').filter(is_resolved=False).order_by('-alert_date')[:5]
