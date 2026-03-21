@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Data Quality Alerts" %} – CoopData{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'analytics:dashboard' %}">{% trans "Home" %}</a></li>
+<li class="breadcrumb-item active">{% trans "Data Alerts" %}</li>
+{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h4 class="fw-bold mb-0">{% trans "Data Quality Alerts" %}</h4>
+    <span class="text-danger small">{{ open_count }} {% trans "open" %}</span>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="?resolved=0" class="btn btn-sm {% if request.GET.resolved == '0' %}btn-danger{% else %}btn-outline-danger{% endif %}">{% trans "Open" %}</a>
+    <a href="?resolved=1" class="btn btn-sm {% if request.GET.resolved == '1' %}btn-success{% else %}btn-outline-success{% endif %}">{% trans "Resolved" %}</a>
+    <a href="?" class="btn btn-sm btn-outline-secondary">{% trans "All" %}</a>
+  </div>
+</div>
+<div class="card border-0 shadow-sm">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>{% trans "Rule" %}</th>
+          <th>{% trans "Severity" %}</th>
+          <th>{% trans "Record" %}</th>
+          <th>{% trans "Message" %}</th>
+          <th>{% trans "Date" %}</th>
+          <th>{% trans "Status" %}</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for alert in alerts %}
+        <tr>
+          <td class="fw-semibold">{{ alert.rule.name }}</td>
+          <td>
+            {% if alert.rule.severity == "error" %}
+            <span class="badge bg-danger">{% trans "Error" %}</span>
+            {% else %}
+            <span class="badge bg-warning text-dark">{% trans "Warning" %}</span>
+            {% endif %}
+          </td>
+          <td class="small text-muted">{{ alert.content_type_label }} #{{ alert.record_id }}</td>
+          <td class="small">{{ alert.message|truncatechars:80 }}</td>
+          <td class="small text-muted">{{ alert.alert_date|date:"Y-m-d H:i" }}</td>
+          <td>
+            {% if alert.is_resolved %}
+            <span class="badge bg-success">{% trans "Resolved" %}</span>
+            {% else %}
+            <span class="badge bg-danger">{% trans "Open" %}</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if not alert.is_resolved %}
+            <button class="btn btn-sm btn-outline-success" data-bs-toggle="modal" data-bs-target="#resolveModal{{ alert.pk }}">
+              <i class="bi bi-check2"></i>
+            </button>
+            {# Resolve modal #}
+            <div class="modal fade" id="resolveModal{{ alert.pk }}" tabindex="-1">
+              <div class="modal-dialog">
+                <div class="modal-content">
+                  <form method="post" action="{% url 'analytics:alert_resolve' alert.pk %}">
+                    {% csrf_token %}
+                    <div class="modal-header"><h6 class="modal-title">{% trans "Resolve Alert" %}</h6></div>
+                    <div class="modal-body">
+                      <p class="small text-muted">{{ alert.message }}</p>
+                      <label class="form-label small fw-semibold">{% trans "Resolution Notes" %}</label>
+                      <textarea name="notes" class="form-control form-control-sm" rows="3" placeholder="{% trans 'Describe how this was resolved…' %}"></textarea>
+                    </div>
+                    <div class="modal-footer">
+                      <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">{% trans "Cancel" %}</button>
+                      <button type="submit" class="btn btn-sm btn-success">{% trans "Mark Resolved" %}</button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" class="text-center text-muted py-4">{% trans "No alerts found." %}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if is_paginated %}
+  <div class="card-footer d-flex justify-content-center">{% include "partials/pagination.html" %}</div>
+  {% endif %}
+</div>
+{% endblock %}

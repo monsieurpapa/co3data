@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Audit Log" %} – CoopData{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'analytics:dashboard' %}">{% trans "Home" %}</a></li>
+<li class="breadcrumb-item active">{% trans "Audit Log" %}</li>
+{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="fw-bold mb-0">{% trans "Audit Log" %}</h4>
+  <span class="badge bg-secondary">TOR §3.3 / §4</span>
+</div>
+<form method="get" class="row g-2 mb-3">
+  <div class="col-12 col-md-5"><input name="q" value="{{ request.GET.q }}" class="form-control form-control-sm" placeholder="{% trans 'Search user, action, description…' %}"></div>
+  <div class="col-6 col-md-2">
+    <select name="action" class="form-select form-select-sm">
+      <option value="">{% trans "All actions" %}</option>
+      {% for val, label in action_choices %}<option value="{{ val }}" {% if request.GET.action == val %}selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="col-6 col-md-2"><input type="date" name="since" value="{{ request.GET.since }}" class="form-control form-control-sm"></div>
+  <div class="col-12 col-md-1"><button class="btn btn-outline-secondary btn-sm w-100" type="submit"><i class="bi bi-funnel"></i></button></div>
+</form>
+<div class="card border-0 shadow-sm">
+  <div class="table-responsive">
+    <table class="table table-sm table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr><th>{% trans "Time" %}</th><th>{% trans "User" %}</th><th>{% trans "Action" %}</th><th>{% trans "Description" %}</th><th>{% trans "IP" %}</th></tr>
+      </thead>
+      <tbody>
+        {% for log in logs %}
+        <tr>
+          <td class="small text-muted text-nowrap">{{ log.timestamp|date:"Y-m-d H:i:s" }}</td>
+          <td class="small">{{ log.user.username|default:"system" }}</td>
+          <td><span class="badge bg-light text-dark">{{ log.get_action_display }}</span></td>
+          <td class="small text-truncate" style="max-width:350px">{{ log.description }}</td>
+          <td class="small font-monospace text-muted">{{ log.ip_address|default:"–" }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" class="text-center text-muted py-4">{% trans "No audit log entries." %}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if is_paginated %}<div class="card-footer d-flex justify-content-center">{% include "partials/pagination.html" %}</div>{% endif %}
+</div>
+{% endblock %}
+ 

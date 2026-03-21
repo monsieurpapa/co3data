@@ -6,7 +6,7 @@
 {% block breadcrumb %}
     <li class="breadcrumb-item"><a href="{% url 'analytics:dashboard' %}">{% trans "Accueil" %}</a></li>
     <li class="breadcrumb-item"><a href="{% url 'users:user_list' %}">{% trans "Utilisateurs" %}</a></li>
-    <li class="breadcrumb-item"><a href="{% url 'users:user_detail' object.unique_id %}">{{ object.get_full_name }}</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'users:user_detail' object.pk %}">{{ object.get_full_name }}</a></li>
     <li class="breadcrumb-item active" aria-current="page">{% trans "Supprimer" %}</li>
 {% endblock %}
 
@@ -61,7 +61,7 @@
                 <form method="post" class="mt-4">
                     {% csrf_token %}
                     <div class="d-grid gap-2 d-sm-flex justify-content-sm-end">
-                        <a href="{% url 'users:user_detail' object.unique_id %}" class="btn btn-secondary">
+                        <a href="{% url 'users:user_detail' object.pk %}" class="btn btn-secondary">
                             <span class="fas fa-times me-1"></span>{% trans "Annuler" %}
                         </a>
                         <button type="submit" class="btn btn-danger">

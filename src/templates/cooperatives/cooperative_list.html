@@ -1,79 +1,92 @@
-```html
-{% extends 'base.html' %}
+{% extends "base.html" %}
 {% load i18n %}
-
-{% block title %}{% trans "Cooperatives" %} | CO3DATA{% endblock %}
-
+{% block title %}{% trans "Cooperatives" %} – CoopData{% endblock %}
 {% block breadcrumb %}
-    <li class="breadcrumb-item"><a href="{% url 'analytics:dashboard' %}">{% trans "Accueil" %}</a></li>
-    <li class="breadcrumb-item active" aria-current="page">{% trans "Coopératives" %}</li>
+<li class="breadcrumb-item"><a href="{% url 'analytics:dashboard' %}">{% trans "Home" %}</a></li>
+<li class="breadcrumb-item active">{% trans "Cooperatives" %}</li>
 {% endblock %}
-
 {% block content %}
-<div class="card mb-3">
-    <div class="card-header bg-light d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">{% trans "Registre des Coopératives" %}</h5>
-        {% if user.role in 'admin,regional_officer' or user.is_superuser %}
-        <a href="{% url 'cooperatives:cooperative_add' %}" class="btn btn-falcon-primary btn-sm">
-            <span class="fas fa-plus me-1"></span>{% trans "Nouvelle Coopérative" %}
-        </a>
-        {% endif %}
-    </div>
-    <div class="card-body p-0">
-        <div class="table-responsive scrollbar">
-            <table class="table table-sm table-striped fs--1 mb-0 overflow-hidden">
-                <thead class="bg-200 text-900">
-                    <tr>
-                        <th class="align-middle">{% trans "Nom" %}</th>
-                        <th class="align-middle">{% trans "Type" %}</th>
-                        <th class="align-middle">{% trans "Région" %}</th>
-                        <th class="align-middle">{% trans "Membres" %}</th>
-                        <th class="align-middle text-end">{% trans "Actions" %}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for coop in cooperatives %}
-                    <tr>
-                        <td class="align-middle fw-semi-bold">
-                            <a href="{% url 'cooperatives:cooperative_detail' coop.unique_id %}">{{ coop.name }}</a>
-                        </td>
-                        <td class="align-middle">{{ coop.get_type_display }}</td>
-                        <td class="align-middle">{{ coop.region.name }}</td>
-                        <td class="align-middle">{{ coop.members.count }}</td>
-                        <td class="align-middle text-end">
-                            <div class="dropdown font-sans-serif">
-                                <button class="btn btn-link text-600 btn-sm dropdown-toggle btn-reveal" type="button" id="dropdown-{{ coop.unique_id }}" data-bs-toggle="dropdown" data-boundary="viewport" aria-haspopup="true" aria-expanded="false">
-                                    <span class="fas fa-ellipsis-h fs--1"></span>
-                                </button>
-                                <div class="dropdown-menu dropdown-menu-end border py-0" aria-labelledby="dropdown-{{ coop.unique_id }}">
-                                    <div class="bg-white py-2">
-                                        <a class="dropdown-item" href="{% url 'cooperatives:cooperative_detail' coop.unique_id %}">
-                                            <span class="fas fa-eye me-2 text-primary"></span>{% trans "Voir" %}
-                                        </a>
-                                        {% if user.profile.role.name in 'admin,regional_officer,manager' or user.is_superuser %}
-                                        <a class="dropdown-item" href="{% url 'cooperatives:cooperative_edit' coop.unique_id %}">
-                                            <span class="fas fa-edit me-2 text-info"></span>{% trans "Modifier" %}
-                                        </a>
-                                        {% endif %}
-                                        {% if user.profile.role.name == 'admin' or user.is_superuser %}
-                                        <div class="dropdown-divider"></div>
-                                        <a class="dropdown-item text-danger" href="{% url 'cooperatives:cooperative_delete' coop.unique_id %}">
-                                            <span class="fas fa-trash me-2"></span>{% trans "Supprimer" %}
-                                        </a>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                            </div>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="5" class="text-center py-4">{% trans "Aucune coopérative trouvée." %}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="mb-0 fw-bold">{% trans "Cooperatives" %}</h4>
+  {% if request.user.role in "system_admin,regional_officer,sacco_manager,field_agent" or request.user.is_superuser %}
+  <a href="{% url 'cooperatives:cooperative_create' %}" class="btn btn-primary btn-sm">
+    <i class="bi bi-plus-lg me-1"></i>{% trans "Register Cooperative" %}
+  </a>
+  {% endif %}
+</div>
+
+{# Filters #}
+<form method="get" class="row g-2 mb-3">
+  <div class="col-12 col-md-4">
+    <input name="q" value="{{ request.GET.q }}" class="form-control form-control-sm" placeholder="{% trans 'Search name or reg. number…' %}">
+  </div>
+  <div class="col-6 col-md-2">
+    <select name="type" class="form-select form-select-sm">
+      <option value="">{% trans "All types" %}</option>
+      {% for val, label in type_choices %}<option value="{{ val }}" {% if request.GET.type == val %}selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="col-6 col-md-2">
+    <select name="status" class="form-select form-select-sm">
+      <option value="">{% trans "All statuses" %}</option>
+      {% for val, label in status_choices %}<option value="{{ val }}" {% if request.GET.status == val %}selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="col-6 col-md-2">
+    <select name="region" class="form-select form-select-sm">
+      <option value="">{% trans "All regions" %}</option>
+      {% for r in regions %}<option value="{{ r.pk }}" {% if request.GET.region == r.pk|stringformat:"s" %}selected{% endif %}>{{ r.name }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="col-6 col-md-2">
+    <button type="submit" class="btn btn-outline-secondary btn-sm w-100"><i class="bi bi-funnel me-1"></i>{% trans "Filter" %}</button>
+  </div>
+</form>
+
+<div class="card border-0 shadow-sm">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>{% trans "Name" %}</th>
+          <th>{% trans "Type" %}</th>
+          <th>{% trans "Region" %}</th>
+          <th>{% trans "Status" %}</th>
+          <th class="text-end">{% trans "Members" %}</th>
+          <th class="text-end">{% trans "Actions" %}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for coop in cooperatives %}
+        <tr>
+          <td>
+            <a href="{% url 'cooperatives:cooperative_detail' coop.pk %}" class="fw-semibold text-decoration-none">{{ coop.name }}</a>
+            {% if coop.registration_number %}<div class="text-muted small">{{ coop.registration_number }}</div>{% endif %}
+          </td>
+          <td><span class="badge bg-light text-dark">{{ coop.get_type_display }}</span></td>
+          <td>{{ coop.region.name }}</td>
+          <td>
+            {% if coop.status == "active" %}<span class="badge bg-success">{% trans "Active" %}</span>
+            {% elif coop.status == "dormant" %}<span class="badge bg-warning text-dark">{% trans "Dormant" %}</span>
+            {% else %}<span class="badge bg-secondary">{{ coop.get_status_display }}</span>{% endif %}
+          </td>
+          <td class="text-end">{{ coop.member_count|default:"–" }}</td>
+          <td class="text-end">
+            <a href="{% url 'cooperatives:cooperative_detail' coop.pk %}" class="btn btn-sm btn-outline-primary">
+              <i class="bi bi-eye"></i>
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="text-center text-muted py-4">{% trans "No cooperatives found." %}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if is_paginated %}
+  <div class="card-footer d-flex justify-content-center">
+    {% include "partials/pagination.html" %}
+  </div>
+  {% endif %}
 </div>
 {% endblock %}

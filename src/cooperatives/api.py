@@ -1,47 +1,48 @@
 from rest_framework import viewsets
 from .models import (
-    Cooperative, Member, Farm, ProductionRecord,
-    WashingStation, FinancialRecord, Buyer,
-    CooperativeCertificate, CooperativeSale
+    Cooperative, Member, SACCOFinancialSummary, 
+    LoanAccount, SavingsAccount, BoardMember, TrainingRecord
 )
 from .serializers import (
-    CooperativeSerializer, MemberSerializer, FarmSerializer, ProductionRecordSerializer,
-    WashingStationSerializer, FinancialRecordSerializer, BuyerSerializer,
-    CooperativeCertificateSerializer, CooperativeSaleSerializer
+    CooperativeSerializer, MemberSerializer, 
+    SACCOFinancialSummarySerializer, LoanAccountSerializer, 
+    SavingsAccountSerializer
 )
 
 class CooperativeViewSet(viewsets.ModelViewSet):
     queryset = Cooperative.objects.all()
     serializer_class = CooperativeSerializer
 
-class WashingStationViewSet(viewsets.ModelViewSet):
-    queryset = WashingStation.objects.all()
-    serializer_class = WashingStationSerializer
-
 class MemberViewSet(viewsets.ModelViewSet):
     queryset = Member.objects.all()
     serializer_class = MemberSerializer
 
-class FarmViewSet(viewsets.ModelViewSet):
-    queryset = Farm.objects.all()
-    serializer_class = FarmSerializer
+class SACCOFinancialSummaryViewSet(viewsets.ModelViewSet):
+    queryset = SACCOFinancialSummary.objects.all()
+    serializer_class = SACCOFinancialSummarySerializer
 
-class ProductionRecordViewSet(viewsets.ModelViewSet):
-    queryset = ProductionRecord.objects.all()
-    serializer_class = ProductionRecordSerializer
+class LoanAccountViewSet(viewsets.ModelViewSet):
+    queryset = LoanAccount.objects.all()
+    serializer_class = LoanAccountSerializer
 
-class FinancialRecordViewSet(viewsets.ModelViewSet):
-    queryset = FinancialRecord.objects.all()
-    serializer_class = FinancialRecordSerializer
+class SavingsAccountViewSet(viewsets.ModelViewSet):
+    queryset = SavingsAccount.objects.all()
+    serializer_class = SavingsAccountSerializer
 
-class BuyerViewSet(viewsets.ModelViewSet):
-    queryset = Buyer.objects.all()
-    serializer_class = BuyerSerializer
+class BoardMemberViewSet(viewsets.ModelViewSet):
+    queryset = BoardMember.objects.all()
+    from rest_framework import serializers
+    class BoardMemberSerializer(serializers.ModelSerializer):
+        class Meta:
+            model = BoardMember
+            fields = "__all__"
+    serializer_class = BoardMemberSerializer
 
-class CooperativeCertificateViewSet(viewsets.ModelViewSet):
-    queryset = CooperativeCertificate.objects.all()
-    serializer_class = CooperativeCertificateSerializer
-
-class CooperativeSaleViewSet(viewsets.ModelViewSet):
-    queryset = CooperativeSale.objects.all()
-    serializer_class = CooperativeSaleSerializer
+class TrainingRecordViewSet(viewsets.ModelViewSet):
+    queryset = TrainingRecord.objects.all()
+    from rest_framework import serializers
+    class TrainingRecordSerializer(serializers.ModelSerializer):
+        class Meta:
+            model = TrainingRecord
+            fields = "__all__"
+    serializer_class = TrainingRecordSerializer

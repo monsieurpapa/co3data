@@ -1,19 +1,71 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# CoopData (SUCOSA II / Eswatini) – Python Dependencies
+# Updated to comply with Terms of Reference (DGRV / MCIT Eswatini)
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Core framework
 Django~=4.2
+
+# Database
 psycopg2-binary~=2.9
+
+# Export formats: PDF, Excel, Word (TOR §3.4 – exportable reports)
 openpyxl~=3.1
 reportlab~=4.0
+python-docx~=1.1          # Word (.docx) export — was missing
+
+# Application server
 gunicorn~=21.2
+
+# Async task queue & broker
 redis~=5.0
 celery~=5.3
-django-environ~=0.11
-djangorestframework~=3.14
-
 django-celery-beat~=2.5
+
+# Environment management
+django-environ~=0.11
+
+# REST API (sync endpoints, Mambu integration layer)
+djangorestframework~=3.14
+djangorestframework-simplejwt~=5.3   # JWT for mobile/offline sync auth
+
+# Authentication & Security
 django-allauth~=0.56
-requests
-cryptography
+django-otp~=1.3                      # TOTP/HOTP base (TOR §4 – 2FA)
+django-two-factor-auth~=1.15         # Full 2FA UI (TOR §4 – 2FA for admins)
+django-axes~=6.4                     # Brute-force login protection
+cryptography~=42.0                   # Encryption at rest
+
+# Forms
 django-crispy-forms~=2.0
 crispy-bootstrap5~=0.7
+
+# Data validation (KPI formula evaluation – safe eval)
 simpleeval~=1.0
+
+# Storage (media/static files)
 cloudinary~=1.40
 django-cloudinary-storage~=0.3
+
+# HTTP client (Mambu API integration, TOR §3.2)
+requests~=2.31
+urllib3~=2.1
+
+# Audit trail (TOR §3.3 – audit trails for user access management)
+django-simple-history~=3.5
+
+# Internationalization helpers (TOR §3.3 – SiSwati, English, Portuguese)
+django-modeltranslation~=0.18
+
+# Data import/export (admin bulk operations)
+django-import-export~=3.3
+
+# Filtering (dashboard/report filtering by region, sector, gender, age)
+django-filter~=23.5
+
+# CORS headers (for mobile PWA / React Native clients)
+django-cors-headers~=4.3
+
+# QR code for 2FA setup
+qrcode[pil]~=7.4
+Pillow~=10.2

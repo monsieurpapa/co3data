@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "KPI Scorecard" %} | CO3DATA{% endblock %}
+
+{% block breadcrumb %}
+    <li class="breadcrumb-item"><a href="{% url 'analytics:dashboard' %}">{% trans "Home" %}</a></li>
+    <li class="breadcrumb-item active" aria-current="page">{% trans "KPI Scorecard" %}</li>
+{% endblock %}
+
+{% block content %}
+<div class="card mb-3">
+    <div class="card-header bg-light">
+        <h5 class="mb-0">{% trans "Key Performance Indicators Scorecard" %}</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive scrollbar">
+            <table class="table table-sm table-striped fs--1 mb-0 overflow-hidden">
+                <thead class="bg-200 text-900">
+                    <tr>
+                        <th class="align-middle">{% trans "KPI Name" %}</th>
+                        <th class="align-middle">{% trans "Category" %}</th>
+                        <th class="align-middle">{% trans "Benchmark" %}</th>
+                        <th class="align-middle">{% trans "Target" %}</th>
+                        <th class="align-middle">{% trans "Description" %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for kpi in kpis %}
+                    <tr>
+                        <td class="align-middle fw-semi-bold">{{ kpi.name }}</td>
+                        <td class="align-middle">{{ kpi.get_category_display }}</td>
+                        <td class="align-middle">
+                            {% if kpi.benchmark_direction == 'higher' %}
+                                &ge;
+                            {% elif kpi.benchmark_direction == 'lower' %}
+                                &le;
+                            {% endif %}
+                            {{ kpi.target_value }}
+                        </td>
+                        <td class="align-middle">{{ kpi.target_description|default:"–" }}</td>
+                        <td class="align-middle small">{{ kpi.description|default:"–" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center py-4">{% trans "No KPIs found." %}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

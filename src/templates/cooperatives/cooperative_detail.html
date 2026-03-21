@@ -1,327 +1,171 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 {% load i18n %}
-
-{% block title %}{{ cooperative.name }} | CO3DATA{% endblock %}
-
-{% block content %}
-<div class="card mb-3">
-    <div class="card-header bg-light">
-        <div class="row align-items-center">
-            <div class="col">
-                <h5 class="mb-0">{% trans "Détails de la Coopérative" %}: {{ cooperative.name }}</h5>
-                <small class="text-600">{% trans "Établie le" %} {{ cooperative.establishment_date|date:"d/m/Y"|default:"---" }}</small>
-            </div>
-            <div class="col-auto">
-                <a href="{% url 'cooperatives:cooperative_list' %}" class="btn btn-falcon-default btn-sm me-2">
-                    <span class="fas fa-arrow-left me-1"></span>{% trans "Retour" %}
-                </a>
-                {% if user.profile.role.name in 'admin,regional_officer,manager' or user.is_superuser %}
-                <a href="{% url 'cooperatives:cooperative_edit' cooperative.unique_id %}" class="btn btn-falcon-primary btn-sm">
-                    <span class="fas fa-edit me-1"></span>{% trans "Modifier" %}
-                </a>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-    <div class="card-body">
-        <div class="row">
-            <div class="col-md-6">
-                <p class="mb-1 fw-bold text-700">{% trans "Type" %}:</p>
-                <p class="text-1000">{{ cooperative.get_type_display }}</p>
-                <p class="mb-1 fw-bold text-700">{% trans "Numéro d'enregistrement" %}:</p>
-                <p class="text-1000">{{ cooperative.registration_number|default:"---" }}</p>
-            </div>
-            <div class="col-md-6">
-                <p class="mb-1 fw-bold text-700">{% trans "Région" %}:</p>
-                <p class="text-1000">{{ cooperative.region.name }}</p>
-                <p class="mb-1 fw-bold text-700">{% trans "Date de création" %}:</p>
-                <p class="text-1000">{{ cooperative.establishment_date|date:"d/m/Y"|default:"---" }}</p>
-            </div>
-            <div class="col-12 mt-3">
-                <p class="mb-1 fw-bold text-700">{% trans "Adresse" %}:</p>
-                <p class="text-1000">{{ cooperative.address|default:"---" }}</p>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="card mb-3">
-    <div class="card-header bg-light">
-        <h5 class="mb-0">{% trans "Collecte de Données" %}</h5>
-    </div>
-    <div class="card-body">
-        <div class="row g-3">
-            {% for q in available_questionnaires %}
-            <div class="col-md-6">
-                <div class="border rounded-1 p-3 bg-white shadow-none">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="mb-1">{{ q.title }}</h6>
-                            <p class="mb-0 fs--1 text-600">{{ q.description|truncatewords:10 }}</p>
-                        </div>
-                        <a href="{% url 'questionnaires:questionnaire_submit' q.unique_id %}?target_id={{ cooperative.unique_id }}" class="btn btn-falcon-primary btn-sm">
-                            <span class="fas fa-edit me-1"></span>{% trans "Répondre" %}
-                        </a>
-                    </div>
-                </div>
-            </div>
-            {% empty %}
-            <p class="text-center text-500 py-3">{% trans "Aucun questionnaire disponible pour le moment." %}</p>
-            {% endfor %}
-        </div>
-    </div>
-</div>
-
-<div class="card mb-3">
-    <div class="card-header bg-light d-flex justify-content-between align-items-center">
-        <div>
-            <h5 class="mb-0">{% trans "Membres de la Coopérative" %}</h5>
-            <span class="badge badge-soft-info">{{ cooperative.members.count }} {% trans "Membres" %}</span>
-        </div>
-        {% if user.profile.role.name in 'admin,regional_officer,manager' or user.is_superuser %}
-        <a href="{% url 'cooperatives:member_add' %}" class="btn btn-falcon-primary btn-sm">
-            <span class="fas fa-user-plus me-1"></span>{% trans "Ajouter un Membre" %}
-        </a>
-        {% endif %}
-    </div>
-    <div class="card-body p-0">
-        <div class="table-responsive scrollbar">
-            <table class="table table-sm table-striped fs--1 mb-0 overflow-hidden">
-                <thead class="bg-200 text-900">
-                    <tr>
-                        <th>ID</th>
-                        <th>{% trans "Nom" %}</th>
-                        <th>{% trans "Sexe" %}</th>
-                        <th>{% trans "Groupe d'âge" %}</th>
-                        <th class="text-end">{% trans "Actions" %}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for member in members %}
-                    <tr>
-                        <td>{{ member.member_id }}</td>
-                        <td><a href="{% url 'cooperatives:member_detail' member.unique_id %}">{{ member.first_name }} {{ member.last_name }}</a></td>
-                        <td>{{ member.get_gender_display }}</td>
-                        <td>{{ member.get_age_group_display }}</td>
-                        <td class="text-end">
-                            <a href="{% url 'cooperatives:member_detail' member.unique_id %}" class="btn btn-link p-0 ms-2" title="View"><span class="fas fa-eye"></span></a>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="5" class="text-center py-4">{% trans "Aucun membre trouvé." %}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        </div>
-    </div>
-    {% if members.has_other_pages %}
-    <div class="card-footer bg-light d-flex justify-content-center">
-        <ul class="pagination pagination-sm mb-0">
-            {% if members.has_previous %}
-            <li class="page-item"><a class="page-link" href="?page={{ members.previous_page_number }}">&laquo;</a></li>
-            {% else %}
-            <li class="page-item disabled"><span class="page-link">&laquo;</span></li>
-            {% endif %}
-            
-            {% for i in members.paginator.page_range %}
-                {% if members.number == i %}
-                <li class="page-item active"><span class="page-link">{{ i }}</span></li>
-                {% else %}
-                <li class="page-item"><a class="page-link" href="?page={{ i }}">{{ i }}</a></li>
-                {% endif %}
-            {% endfor %}
-            
-            {% if members.has_next %}
-            <li class="page-item"><a class="page-link" href="?page={{ members.next_page_number }}">&raquo;</a></li>
-            {% else %}
-            <li class="page-item disabled"><span class="page-link">&raquo;</span></li>
-            {% endif %}
-        </ul>
-    </div>
-    {% endif %}
-</div>
-
-<div class="row">
-    <div class="col-lg-6">
-        <div class="card mb-3">
-            <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                <div>
-                    <h5 class="mb-0">{% trans "Certificats" %}</h5>
-                    <small class="text-600">{% trans "Documents officiels associés à cette coopérative" %}</small>
-                </div>
-                {% if user.profile.role.name in 'admin,regional_officer,manager' or user.is_superuser %}
-                <a href="{% url 'cooperatives:cooperative_certificate_add' cooperative.unique_id %}" class="btn btn-falcon-primary btn-sm">
-                    <span class="fas fa-plus me-1"></span>{% trans "Ajouter" %}
-                </a>
-                {% endif %}
-            </div>
-            <div class="card-body p-0">
-                <div class="table-responsive scrollbar">
-                    <table class="table table-sm table-striped fs--1 mb-0 overflow-hidden">
-                        <thead class="bg-200 text-900">
-                            <tr>
-                                <th>{% trans "Nom" %}</th>
-                                <th>{% trans "Émis par" %}</th>
-                                <th>{% trans "Date" %}</th>
-                                <th>{% trans "Expire" %}</th>
-                                <th class="text-end">{% trans "Actions" %}</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for cert in certificates|slice:":5" %}
-                            <tr>
-                                <td>{{ cert.name }}</td>
-                                <td>{{ cert.issuer|default:"-" }}</td>
-                                <td>{{ cert.issued_date|date:"d/m/Y"|default:"-" }}</td>
-                                <td>{{ cert.expires_date|date:"d/m/Y"|default:"-" }}</td>
-                                <td class="text-end">
-                                    <div class="d-flex justify-content-end gap-2">
-                                        {% if cert.document %}
-                                        <a href="{{ cert.document.url }}" target="_blank" class="btn btn-sm btn-outline-secondary">
-                                            <span class="fas fa-file-pdf"></span>
-                                        </a>
-                                        {% endif %}
-                                        <a href="{% url 'cooperatives:cooperative_certificate_edit' cooperative.unique_id cert.unique_id %}" class="btn btn-sm btn-outline-info">
-                                            <span class="fas fa-edit"></span>
-                                        </a>
-                                        <a href="{% url 'cooperatives:cooperative_certificate_delete' cooperative.unique_id cert.unique_id %}" class="btn btn-sm btn-outline-danger">
-                                            <span class="fas fa-trash"></span>
-                                        </a>
-                                    </div>
-                                </td>
-                            </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="5" class="text-center py-4">{% trans "Aucun certificat disponible." %}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            {% if certificates|length > 5 %}
-            <div class="card-footer bg-light text-end">
-                <a href="{% url 'cooperatives:cooperative_certificate_list' cooperative.unique_id %}" class="btn btn-sm btn-link">
-                    {% trans "Voir tous les certificats" %}
-                </a>
-            </div>
-            {% endif %}
-        </div>
-    </div>
-
-    <div class="col-lg-6">
-        <div class="card mb-3">
-            <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                <div>
-                    <h5 class="mb-0">{% trans "Historique des ventes" %}</h5>
-                    <small class="text-600">{% trans "Volumes et destinations" %}</small>
-                </div>
-                {% if user.profile.role.name in 'admin,regional_officer,manager' or user.is_superuser %}
-                <a href="{% url 'cooperatives:cooperative_sale_add' cooperative.unique_id %}" class="btn btn-falcon-primary btn-sm">
-                    <span class="fas fa-plus me-1"></span>{% trans "Ajouter" %}
-                </a>
-                {% endif %}
-            </div>
-            <div class="card-body">
-                {% if sales %}
-                <div class="row g-3">
-                    <div class="col-12">
-                        <canvas id="salesByYearChart" height="200"></canvas>
-                    </div>
-                    <div class="col-12">
-                        <canvas id="salesByDestinationChart" height="200"></canvas>
-                    </div>
-                </div>
-                {% else %}
-                <div class="text-center py-4">
-                    <p class="text-600">{% trans "Aucune vente enregistrée." %}</p>
-                </div>
-                {% endif %}
-            </div>
-            <div class="card-footer bg-light text-end">
-                <a href="{% url 'cooperatives:cooperative_sale_list' cooperative.unique_id %}" class="btn btn-sm btn-link">
-                    {% trans "Voir toutes les ventes" %}
-                </a>
-            </div>
-        </div>
-    </div>
-</div>
-
-{% block extra_js %}
-    {% if sales %}
-    {{ sales_by_year|json_script:"sales-by-year-data" }}
-    {{ sales_by_destination|json_script:"sales-by-destination-data" }}
-    <script>
-        (function() {
-            const yearData = JSON.parse(document.getElementById('sales-by-year-data').textContent || '[]');
-            const destData = JSON.parse(document.getElementById('sales-by-destination-data').textContent || '[]');
-
-            const yearLabels = yearData.map(d => d.year);
-            const yearValues = yearData.map(d => d.total_qty);
-
-            const destLabels = destData.map(d => d.destination_country);
-            const destValues = destData.map(d => d.total_qty);
-
-            const yearCtx = document.getElementById('salesByYearChart');
-            if (yearCtx) {
-                new Chart(yearCtx.getContext('2d'), {
-                    type: 'bar',
-                    data: {
-                        labels: yearLabels,
-                        datasets: [{
-                            label: '{% trans "Quantité (kg)" %}',
-                            data: yearValues,
-                            backgroundColor: 'rgba(54, 162, 235, 0.6)',
-                            borderColor: 'rgba(54, 162, 235, 1)',
-                            borderWidth: 1
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        plugins: {
-                            legend: { display: false },
-                            tooltip: { mode: 'index', intersect: false }
-                        },
-                        scales: {
-                            x: { title: { display: true, text: '{% trans "Année" %}' } },
-                            y: { title: { display: true, text: '{% trans "Quantité (kg)" %}' }, beginAtZero: true }
-                        }
-                    }
-                });
-            }
-
-            const destCtx = document.getElementById('salesByDestinationChart');
-            if (destCtx) {
-                new Chart(destCtx.getContext('2d'), {
-                    type: 'pie',
-                    data: {
-                        labels: destLabels,
-                        datasets: [{
-                            data: destValues,
-                            backgroundColor: [
-                                'rgba(54, 162, 235, 0.6)',
-                                'rgba(255, 99, 132, 0.6)',
-                                'rgba(255, 206, 86, 0.6)',
-                                'rgba(75, 192, 192, 0.6)',
-                                'rgba(153, 102, 255, 0.6)',
-                                'rgba(255, 159, 64, 0.6)',
-                            ],
-                            borderWidth: 1
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        plugins: {
-                            legend: { position: 'bottom' }
-                        }
-                    }
-                });
-            }
-        })();
-    </script>
-    {% endif %}
+{% block title %}{{ cooperative.name }} – CoopData{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'cooperatives:cooperative_list' %}">{% trans "Cooperatives" %}</a></li>
+<li class="breadcrumb-item active">{{ cooperative.name }}</li>
 {% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-start mb-3">
+  <div>
+    <h4 class="fw-bold mb-1">{{ cooperative.name }}</h4>
+    <span class="badge bg-primary me-1">{{ cooperative.get_type_display }}</span>
+    {% if cooperative.status == "active" %}<span class="badge bg-success">{% trans "Active" %}</span>
+    {% else %}<span class="badge bg-warning text-dark">{{ cooperative.get_status_display }}</span>{% endif %}
+  </div>
+  <div class="d-flex gap-2">
+    {% if request.user.role in "system_admin,regional_officer,sacco_manager" or request.user.is_superuser %}
+    <a href="{% url 'cooperatives:cooperative_update' cooperative.pk %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-pencil me-1"></i>{% trans "Edit" %}
+    </a>
+    {% endif %}
+    <a href="{% url 'analytics:cooperative_kpi' cooperative.pk %}" class="btn btn-primary btn-sm">
+      <i class="bi bi-bar-chart-line me-1"></i>{% trans "KPI Dashboard" %}
+    </a>
+  </div>
+</div>
+ 
+<div class="row g-4">
+  {# Info card #}
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm p-3">
+      <h6 class="fw-semibold mb-3 text-muted">{% trans "Details" %}</h6>
+      <dl class="row small mb-0">
+        <dt class="col-5 text-muted">{% trans "Reg. No." %}</dt><dd class="col-7">{{ cooperative.registration_number|default:"–" }}</dd>
+        <dt class="col-5 text-muted">{% trans "Region" %}</dt><dd class="col-7">{{ cooperative.region.name }}</dd>
+        <dt class="col-5 text-muted">{% trans "Sector" %}</dt><dd class="col-7">{{ cooperative.sector|default:"–" }}</dd>
+        <dt class="col-5 text-muted">{% trans "Established" %}</dt><dd class="col-7">{{ cooperative.establishment_date|default:"–" }}</dd>
+        <dt class="col-5 text-muted">{% trans "Phone" %}</dt><dd class="col-7">{{ cooperative.phone|default:"–" }}</dd>
+        <dt class="col-5 text-muted">{% trans "Email" %}</dt><dd class="col-7">{{ cooperative.email|default:"–" }}</dd>
+        {% if cooperative.mambu_encoded_key %}
+        <dt class="col-5 text-muted">Mambu</dt>
+        <dd class="col-7"><code class="small">{{ cooperative.mambu_encoded_key }}</code></dd>
+        {% endif %}
+      </dl>
+    </div>
+  </div>
+ 
+  {# Latest financial KPIs #}
+  <div class="col-md-8">
+    {% if latest_summary %}
+    <div class="card border-0 shadow-sm p-3">
+      <div class="d-flex justify-content-between mb-3">
+        <h6 class="fw-semibold mb-0">{% trans "Latest Financial KPIs" %} <small class="text-muted fw-normal">({{ latest_summary.period_end }})</small></h6>
+        <a href="{% url 'cooperatives:financial_summary_detail' latest_summary.pk %}" class="small">{% trans "Full report" %}</a>
+      </div>
+      <div class="row g-2">
+        {% for card in kpi_cards %}
+        <div class="col-6 col-md-3">
+          <div class="text-center p-2 bg-light rounded">
+            <div class="small text-muted mb-1">{{ card.label }}</div>
+            <div class="fw-bold fs-5">
+              {% if card.value %}
+                {% if card.format == "percent" %}{{ card.value|floatformat:1 }}%
+                {% elif card.format == "currency" %}SZL {{ card.value|floatformat:0 }}
+                {% else %}{{ card.value }}{% endif %}
+              {% else %}–{% endif %}
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% else %}
+    <div class="card border-0 shadow-sm p-3 text-center text-muted">
+      <i class="bi bi-journal-x fs-3 mb-2 d-block opacity-25"></i>
+      {% trans "No verified financial summary yet." %}
+      <a href="{% url 'cooperatives:financial_summary_create' cooperative.pk %}" class="d-block mt-2 btn btn-sm btn-outline-primary">
+        <i class="bi bi-plus me-1"></i>{% trans "Submit Financial Data" %}
+      </a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+ 
+{# Members preview #}
+<div class="card border-0 shadow-sm mt-4">
+  <div class="card-header bg-white d-flex justify-content-between align-items-center">
+    <span class="fw-semibold">{% trans "Members" %} <span class="badge bg-primary ms-1">{{ member_count }}</span></span>
+    <div class="d-flex gap-2">
+      <a href="{% url 'cooperatives:member_list' cooperative.pk %}" class="btn btn-sm btn-outline-secondary">{% trans "View all" %}</a>
+      {% if request.user.role in "system_admin,regional_officer,sacco_manager,field_agent" or request.user.is_superuser %}
+      <a href="{% url 'cooperatives:member_create' cooperative.pk %}" class="btn btn-sm btn-primary">
+        <i class="bi bi-person-plus me-1"></i>{% trans "Add Member" %}
+      </a>
+      {% endif %}
+    </div>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-sm table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr><th>{% trans "Name" %}</th><th>{% trans "Member ID" %}</th><th>{% trans "Gender" %}</th><th>{% trans "Age Group" %}</th><th>{% trans "Flags" %}</th></tr>
+      </thead>
+      <tbody>
+        {% for m in members %}
+        <tr>
+          <td><a href="{% url 'cooperatives:member_detail' m.pk %}" class="text-decoration-none">{{ m.first_name }} {{ m.last_name }}</a></td>
+          <td class="font-monospace small">{{ m.member_id }}</td>
+          <td>{{ m.get_gender_display }}</td>
+          <td>{{ m.get_age_group_display }}</td>
+          <td>
+            {% if m.is_youth %}<span class="badge bg-info">{% trans "Youth" %}</span>{% endif %}
+            {% if m.is_marginalized %}<span class="badge bg-secondary">{% trans "Marginalized" %}</span>{% endif %}
+            {% if m.is_board_member %}<span class="badge bg-warning text-dark">{% trans "Board" %}</span>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+ 
+{# Board & Training in a row #}
+<div class="row g-4 mt-0">
+  <div class="col-md-6">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white d-flex justify-content-between">
+        <span class="fw-semibold">{% trans "Board Composition" %}</span>
+        <a href="{% url 'cooperatives:board_member_create' cooperative.pk %}" class="btn btn-sm btn-outline-primary">
+          <i class="bi bi-plus"></i>
+        </a>
+      </div>
+      <ul class="list-group list-group-flush">
+        {% for bm in board %}
+        <li class="list-group-item d-flex justify-content-between align-items-center py-2">
+          <div>
+            <span class="fw-semibold">{{ bm.get_position_display }}</span>
+            {% if bm.member %}<span class="text-muted ms-2 small">{{ bm.member.first_name }} {{ bm.member.last_name }}</span>{% endif %}
+          </div>
+          <div>
+            {% if bm.gender == "female" %}<span class="badge bg-pink">F</span>{% endif %}
+            {% if bm.is_youth %}<span class="badge bg-info ms-1">Y</span>{% endif %}
+          </div>
+        </li>
+        {% empty %}
+        <li class="list-group-item text-muted text-center">{% trans "No board members recorded." %}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white d-flex justify-content-between">
+        <span class="fw-semibold">{% trans "Recent Trainings" %}</span>
+        <a href="{% url 'cooperatives:training_create' cooperative.pk %}" class="btn btn-sm btn-outline-primary">
+          <i class="bi bi-plus"></i>
+        </a>
+      </div>
+      <ul class="list-group list-group-flush">
+        {% for t in trainings %}
+        <li class="list-group-item py-2">
+          <div class="fw-semibold small">{{ t.title }}</div>
+          <div class="text-muted small">{{ t.training_date }} · {{ t.duration_hours }}h · {{ t.total_participants }} {% trans "participants" %}</div>
+        </li>
+        {% empty %}
+        <li class="list-group-item text-muted text-center">{% trans "No trainings recorded." %}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+</div>
 {% endblock %}

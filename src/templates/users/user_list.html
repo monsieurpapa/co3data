@@ -1,63 +1,98 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 {% load i18n %}
-
-{% block title %}{% trans "Détail Utilisateurs" %} | CO3DATA{% endblock %}
-
+{% block title %}{% trans "User Management" %} – CoopData{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'analytics:dashboard' %}">{% trans "Home" %}</a></li>
+<li class="breadcrumb-item active">{% trans "Users" %}</li>
+{% endblock %}
 {% block content %}
-<div class="card mb-3">
-    <div class="card-header bg-light d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">{% trans "Gestion des Utilisateurs" %}</h5>
-        {% if request.user.is_superuser %}
-        <a href="{% url 'admin:users_user_add' %}" class="btn btn-falcon-primary btn-sm">
-            <span class="fas fa-user-plus me-1"></span>{% trans "Nouvel Utilisateur" %}
-        </a>
-        {% endif %}
-    </div>
-    <div class="card-body p-0">
-        <div class="table-responsive scrollbar">
-            <table class="table table-sm table-striped fs--1 mb-0 overflow-hidden">
-                <thead class="bg-200 text-900">
-                    <tr>
-                        <th class="align-middle">{% trans "Nom" %}</th>
-                        <th class="align-middle">{% trans "Email" %}</th>
-                        <th class="align-middle">{% trans "Rôle" %}</th>
-                        <th class="align-middle">{% trans "Statut" %}</th>
-                        <th class="align-middle text-end">{% trans "Action" %}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for user in user_list %}
-                    <tr>
-                        <td class="align-middle fw-semi-bold">{{ user.get_full_name|default:user.username }}</td>
-                        <td class="align-middle">{{ user.email }}</td>
-                        <td class="align-middle">
-                            {% if user.is_superuser %}
-                            <span class="badge badge-soft-danger">{% trans "Superuser" %}</span>
-                            {% elif user.is_staff %}
-                            <span class="badge badge-soft-warning">{% trans "Staff" %}</span>
-                            {% else %}
-                            <span class="badge badge-soft-info">{% trans "User" %}</span>
-                            {% endif %}
-                        </td>
-                        <td class="align-middle">
-                            {% if user.is_active %}
-                            <span class="badge badge-soft-success">{% trans "Actif" %}</span>
-                            {% else %}
-                            <span class="badge badge-soft-secondary">{% trans "Inactif" %}</span>
-                            {% endif %}
-                        </td>
-                        <td class="align-middle text-end">
-                            {% if request.user.is_superuser %}
-                            <a href="{% url 'admin:users_user_change' user.pk %}" class="btn btn-link p-0" title="{% trans 'Modifier (admin)' %}">
-                                <span class="fas fa-edit"></span>
-                            </a>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="fw-bold mb-0">{% trans "User Management" %}</h4>
+  <a href="{% url 'users:user_create' %}" class="btn btn-primary btn-sm">
+    <i class="bi bi-person-plus me-1"></i>{% trans "Add User" %}
+  </a>
+</div>
+ 
+<form method="get" class="row g-2 mb-3">
+  <div class="col-12 col-md-5">
+    <input name="q" value="{{ request.GET.q }}" class="form-control form-control-sm" placeholder="{% trans 'Search name, username, email…' %}">
+  </div>
+  <div class="col-6 col-md-3">
+    <select name="role" class="form-select form-select-sm">
+      <option value="">{% trans "All roles" %}</option>
+      {% for val, label in role_choices %}<option value="{{ val }}" {% if request.GET.role == val %}selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="col-6 col-md-3">
+    <select name="region" class="form-select form-select-sm">
+      <option value="">{% trans "All regions" %}</option>
+      {% for r in regions %}<option value="{{ r.pk }}" {% if request.GET.region == r.pk|stringformat:"s" %}selected{% endif %}>{{ r.name }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="col-12 col-md-1">
+    <button type="submit" class="btn btn-outline-secondary btn-sm w-100"><i class="bi bi-funnel"></i></button>
+  </div>
+</form>
+ 
+<div class="card border-0 shadow-sm">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>{% trans "Name" %}</th>
+          <th>{% trans "Role" %}</th>
+          <th>{% trans "Region" %}</th>
+          <th>{% trans "Language" %}</th>
+          <th>{% trans "2FA" %}</th>
+          <th>{% trans "Status" %}</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+        <tr>
+          <td>
+            <div class="fw-semibold">{{ u.get_full_name|default:u.username }}</div>
+            <div class="small text-muted">{{ u.email }}</div>
+          </td>
+          <td><span class="badge bg-light text-dark">{{ u.get_role_display }}</span></td>
+          <td>{{ u.region.name|default:"–" }}</td>
+          <td><span class="badge bg-secondary">{{ u.preferred_language|upper }}</span></td>
+          <td>
+            {% if u.requires_2fa %}
+              {% if u.is_2fa_enrolled %}<i class="bi bi-shield-check text-success" title="{% trans 'Enrolled' %}"></i>
+              {% else %}<i class="bi bi-shield-exclamation text-warning" title="{% trans 'Not enrolled' %}"></i>{% endif %}
+            {% else %}<span class="text-muted small">–</span>{% endif %}
+          </td>
+          <td>
+            {% if u.is_active %}<span class="badge bg-success">{% trans "Active" %}</span>
+            {% else %}<span class="badge bg-danger">{% trans "Inactive" %}</span>{% endif %}
+          </td>
+          <td>
+            <div class="dropdown">
+              <button class="btn btn-sm btn-outline-secondary py-0" data-bs-toggle="dropdown"><i class="bi bi-three-dots"></i></button>
+              <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item" href="{% url 'users:user_detail' u.pk %}"><i class="bi bi-eye me-2"></i>{% trans "View" %}</a></li>
+                <li><a class="dropdown-item" href="{% url 'users:user_update' u.pk %}"><i class="bi bi-pencil me-2"></i>{% trans "Edit" %}</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                  <form method="post" action="{% url 'users:user_toggle_active' u.pk %}">{% csrf_token %}
+                    <button class="dropdown-item {% if u.is_active %}text-danger{% else %}text-success{% endif %}" type="submit">
+                      {% if u.is_active %}<i class="bi bi-person-x me-2"></i>{% trans "Deactivate" %}
+                      {% else %}<i class="bi bi-person-check me-2"></i>{% trans "Activate" %}{% endif %}
+                    </button>
+                  </form>
+                </li>
+              </ul>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" class="text-center text-muted py-4">{% trans "No users found." %}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if is_paginated %}<div class="card-footer d-flex justify-content-center">{% include "partials/pagination.html" %}</div>{% endif %}
 </div>
 {% endblock %}

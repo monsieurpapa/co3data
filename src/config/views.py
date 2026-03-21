@@ -9,6 +9,12 @@ for testing and direct access.
 from urllib.parse import urlparse
 
 from django.shortcuts import render
+from django.http import HttpResponse
+
+
+def health_check(request):
+    """Minimal endpoint for container health probes."""
+    return HttpResponse("OK", status=200)
 
 
 def _get_safe_referrer(request):

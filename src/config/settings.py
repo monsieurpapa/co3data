@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.humanize',
 
     # Third-party apps
     'django.contrib.sites',  # Required by allauth
@@ -52,6 +53,24 @@ INSTALLED_APPS = [
     'allauth.socialaccount.providers.google',
 
     'django_celery_beat',
+    
+    # 2FA (TOR §4 – 2FA)
+    'two_factor',
+    'django_otp',
+    'django_otp.plugins.otp_static',
+    'django_otp.plugins.otp_totp',
+
+    # Security
+    'axes',
+
+    # Data import/export
+    'import_export',
+
+    # Filtering
+    'django_filters',
+
+    # CORS
+    'corsheaders',
 
     # Cloudinary storage
     'cloudinary',
@@ -67,6 +86,7 @@ INSTALLED_APPS = [
     'sync',
 
     'rest_framework',
+    'rest_framework_simplejwt',
 
     # Crispy Forms
     'crispy_forms',
@@ -78,6 +98,7 @@ SITE_ID = 1
 AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
     'allauth.account.auth_backends.AuthenticationBackend',
+    'axes.backends.AxesStandaloneBackend',
 ]
 ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_AUTHENTICATION_METHOD = 'email'
@@ -100,6 +121,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'allauth.account.middleware.AccountMiddleware',
+    'axes.middleware.AxesMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'

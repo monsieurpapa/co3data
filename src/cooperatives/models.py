@@ -1,327 +1,587 @@
+# src/cooperatives/models.py
+# ─────────────────────────────────────────────────────────────────────────────
+# CoopData – Cooperatives & SACCO financial models
+# Aligned with DGRV / MCIT Eswatini TOR (SUCOSA II)
+#
+# Key changes vs original:
+#   • Cooperative.type updated for Eswatini context (SACCO primary, removed
+#     coffee/cocoa which were Central-Africa focused)
+#   • Added SACCOFinancialSummary – period-based snapshot for KPI calculation
+#     (delinquency rate, liquidity, capital adequacy, PAR — TOR §3.1)
+#   • Added LoanPortfolio / LoanAccount – core SACCO lending data
+#   • Added SavingsAccount – member savings & shares tracking
+#   • Added BoardMember – board composition tracking (TOR §3.1 KPI)
+#   • Added TrainingRecord – training hours KPI (TOR §3.1)
+#   • Mandatory gender/youth/marginalized coding throughout (TOR §3.1)
+# ─────────────────────────────────────────────────────────────────────────────
+
+from decimal import Decimal
+
+from django.core.validators import MinValueValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+
 from users.models import Region, User
 import uuid
 
+# ── Shared choice constants ───────────────────────────────────────────────────
+
+GENDER_CHOICES = (
+    ("male", _("Male")),
+    ("female", _("Female")),
+    ("other", _("Other / Prefer not to say")),
+)
+
+AGE_GROUP_CHOICES = (
+    ("youth", _("Youth (18–35)")),
+    ("adult", _("Adult (36–60)")),
+    ("senior", _("Senior (61+)")),
+    ("under18", _("Under 18")),
+)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Cooperative
+# ─────────────────────────────────────────────────────────────────────────────
+
 class Cooperative(models.Model):
-    unique_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, db_index=True)
+    """
+    Central entity representing a registered cooperative or SACCO in Eswatini.
+    """
+
+    TYPE_SACCO = "sacco"
+    TYPE_AGRI = "agricultural"
+    TYPE_CONSUMER = "consumer"
+    TYPE_HOUSING = "housing"
+    TYPE_MULTIPURPOSE = "multipurpose"
+    TYPE_WORKER = "worker"
+    TYPE_OTHER = "other"
 
     COOPERATIVE_TYPES = (
-        ("coffee", _("Coffee Cooperative")),
-        ("cocoa", _("Cocoa Cooperative")),
-        ("mixed", _("Mixed Coffee & Cocoa Cooperative")),
-        ("sacco", _("SACCO (Savings and Credit Cooperative)")),
-        ("other", _("Other Cooperative Type")),
+        (TYPE_SACCO, _("SACCO (Savings & Credit Cooperative)")),
+        (TYPE_AGRI, _("Agricultural Cooperative")),
+        (TYPE_CONSUMER, _("Consumer Cooperative")),
+        (TYPE_HOUSING, _("Housing Cooperative")),
+        (TYPE_MULTIPURPOSE, _("Multi-Purpose Cooperative")),
+        (TYPE_WORKER, _("Worker / Producer Cooperative")),
+        (TYPE_OTHER, _("Other")),
     )
+
+    STATUS_ACTIVE = "active"
+    STATUS_DORMANT = "dormant"
+    STATUS_DEREGISTERED = "deregistered"
+    STATUS_PENDING = "pending"
+
+    STATUS_CHOICES = (
+        (STATUS_ACTIVE, _("Active")),
+        (STATUS_DORMANT, _("Dormant")),
+        (STATUS_DEREGISTERED, _("Deregistered")),
+        (STATUS_PENDING, _("Pending Registration")),
+    )
+
+    # ── Identity ──────────────────────────────────────────────────────────────
+    unique_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, db_index=True)
     name = models.CharField(max_length=255, unique=True)
-    registration_number = models.CharField(max_length=100, unique=True, blank=True, null=True)
-    type = models.CharField(max_length=50, choices=COOPERATIVE_TYPES)
-    region = models.ForeignKey(Region, on_delete=models.PROTECT, related_name="cooperatives")
+    registration_number = models.CharField(
+        max_length=100, unique=True, blank=True, null=True
+    )
+    type = models.CharField(
+        max_length=30, choices=COOPERATIVE_TYPES, db_index=True
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default=STATUS_ACTIVE,
+        db_index=True,
+    )
+    sector = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text=_("Economic sector, e.g. agriculture, finance, retail"),
+    )
+
+    # ── Location ──────────────────────────────────────────────────────────────
+    region = models.ForeignKey(
+        Region, on_delete=models.PROTECT, related_name="cooperatives"
+    )
+    physical_address = models.TextField(blank=True, null=True)
+    postal_address = models.TextField(blank=True, null=True)
+
+    # ── Contacts ──────────────────────────────────────────────────────────────
+    contact_person = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        related_name="managed_cooperatives",
+    )
+    phone = models.CharField(max_length=20, blank=True)
+    email = models.EmailField(blank=True)
+    website = models.URLField(blank=True)
+
+    # ── Registration ──────────────────────────────────────────────────────────
     establishment_date = models.DateField(blank=True, null=True)
-    contact_person = models.ForeignKey(User, on_delete=models.SET_NULL, blank=True, null=True, related_name="managed_cooperatives")
-    address = models.TextField(blank=True, null=True)
+    registration_date = models.DateField(blank=True, null=True)
+    apex_body = models.ForeignKey(
+        "self",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="member_cooperatives",
+        help_text=_("Parent Apex body or Federation, if any"),
+    )
+
+    # ── Mambu integration (TOR §3.2) ──────────────────────────────────────────
+    mambu_encoded_key = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        unique=True,
+        help_text=_("Mambu branch/centre encoded key for API sync"),
+    )
+    mambu_last_synced = models.DateTimeField(blank=True, null=True)
+
+    # ── Meta ──────────────────────────────────────────────────────────────────
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         verbose_name = _("Cooperative")
         verbose_name_plural = _("Cooperatives")
+        ordering = ["name"]
 
     def __str__(self):
-        return self.name
+        return f"{self.name} [{self.get_type_display()}]"
 
 
-class WashingStation(models.Model):
-    unique_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, db_index=True)
-
-    cooperative = models.ForeignKey(Cooperative, on_delete=models.CASCADE, related_name="washing_stations")
-    name = models.CharField(max_length=255)
-    code = models.CharField(max_length=20, blank=True, null=True)
-    village = models.CharField(max_length=100, blank=True, null=True)
-    groupement = models.CharField(max_length=100, blank=True, null=True)
-    latitude = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True)
-    longitude = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True)
-    is_active = models.BooleanField(default=True)
-    created_at = models.DateTimeField(auto_now_add=True, null=True)
-    updated_at = models.DateTimeField(auto_now=True, null=True)
-
-    class Meta:
-        verbose_name = _("Washing Station")
-        verbose_name_plural = _("Washing Stations")
-
-    def __str__(self):
-        return f"{self.name} ({self.cooperative})"
+# ─────────────────────────────────────────────────────────────────────────────
+# Member
+# ─────────────────────────────────────────────────────────────────────────────
 
 class Member(models.Model):
-    unique_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, db_index=True)
+    """
+    Individual cooperative / SACCO member.
+    Mandatory gender, youth, and marginalized coding (TOR §3.1).
+    """
 
-    GENDER_CHOICES = (
-        ("male", _("Male")),
-        ("female", _("Female")),
-        ("other", _("Other")),
+    cooperative = models.ForeignKey(
+        Cooperative, on_delete=models.CASCADE, related_name="members"
     )
-    AGE_GROUP_CHOICES = (
-        ("youth", _("Youth (18-35)")),
-        ("adult", _("Adult (36-60)")),
-        ("senior", _("Senior (61+)")),
-    )
-    BOARD_ROLE_CHOICES = (
-        ("president", _("President")),
-        ("vice_president", _("Vice President")),
-        ("secretary", _("Secretary")),
-        ("treasurer", _("Treasurer")),
-        ("advisor", _("Advisor")),
-        ("other", _("Other")),
-    )
-    cooperative = models.ForeignKey(Cooperative, on_delete=models.CASCADE, related_name="members")
+    # Identity
+    unique_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, db_index=True)
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
     member_id = models.CharField(max_length=50)
-    gender = models.CharField(max_length=10, choices=GENDER_CHOICES)
-    age_group = models.CharField(max_length=10, choices=AGE_GROUP_CHOICES)
-    
-    # Geographic Data
-    territory = models.CharField(max_length=100, blank=True, null=True, verbose_name=_("Territory"))
-    groupement = models.CharField(max_length=100, blank=True, null=True, verbose_name=_("Groupement"))
-    village = models.CharField(max_length=100, blank=True, null=True, verbose_name=_("Village"))
-    subvillage = models.CharField(max_length=100, blank=True, null=True, verbose_name=_("Sub-village / Localité"))
-
-    farmer_code = models.CharField(max_length=50, blank=True, null=True, unique=True, db_index=True, verbose_name=_("Farmer Code"))
-    farmer_code_prefix = models.CharField(max_length=20, blank=True, null=True, db_index=True)
-    farmer_code_initials = models.CharField(max_length=20, blank=True, null=True, db_index=True)
-    farmer_code_number = models.PositiveIntegerField(blank=True, null=True, db_index=True)
-    
-    is_marginalized = models.BooleanField(default=False, verbose_name=_("From Marginalized Group"))
-    is_board_member = models.BooleanField(default=False, verbose_name=_("Board Member"))
-    board_role = models.CharField(max_length=50, choices=BOARD_ROLE_CHOICES, blank=True, null=True, verbose_name=_("Board Role"))
+    national_id = models.CharField(max_length=50, blank=True, null=True)
+    date_of_birth = models.DateField(blank=True, null=True)
+    # TOR §3.1 – mandatory inclusion coding
+    gender = models.CharField(max_length=10, choices=GENDER_CHOICES, db_index=True)
+    age_group = models.CharField(
+        max_length=10, choices=AGE_GROUP_CHOICES, db_index=True
+    )
+    is_youth = models.BooleanField(default=False, db_index=True)
+    is_marginalized = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text=_("Persons with disabilities, widows, displaced persons, etc."),
+    )
+    is_board_member = models.BooleanField(default=False)
+    # Contact
     phone_number = models.CharField(max_length=20, blank=True, null=True)
+    email = models.EmailField(blank=True, null=True)
+    physical_address = models.TextField(blank=True, null=True)
+    # Status
     date_joined = models.DateField(auto_now_add=True)
+    is_active = models.BooleanField(default=True)
+    exit_date = models.DateField(blank=True, null=True)
+    exit_reason = models.TextField(blank=True, null=True)
 
     class Meta:
         verbose_name = _("Member")
         verbose_name_plural = _("Members")
         unique_together = ("cooperative", "member_id")
+        ordering = ["last_name", "first_name"]
 
     def __str__(self):
         return f"{self.first_name} {self.last_name} ({self.member_id})"
 
-    def clean(self):
-        from django.core.exceptions import ValidationError
-        import re
 
-        if self.is_board_member and not self.board_role:
-            raise ValidationError(_("Board role is required for board members."))
+# ─────────────────────────────────────────────────────────────────────────────
+# Board Composition (TOR §3.1 KPI – board composition)
+# ─────────────────────────────────────────────────────────────────────────────
 
-        if self.farmer_code:
-            pattern = r"^[A-Z]+ [A-Z]+ \d{3}$"
-            if not re.match(pattern, self.farmer_code):
-                raise ValidationError({"farmer_code": _("Farmer code must match pattern 'TCC BMB 009'.")})
+class BoardMember(models.Model):
+    """Tracks board / committee composition for KPI reporting (TOR §3.1)."""
 
-            prefix, initials, number_str = self.farmer_code.split(" ")
-            self.farmer_code_prefix = prefix
-            self.farmer_code_initials = initials
-            try:
-                self.farmer_code_number = int(number_str)
-            except ValueError:
-                raise ValidationError({"farmer_code": _("Invalid farmer code number segment.")})
-
-class Farm(models.Model):
-    unique_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, db_index=True)
-
-    member = models.ForeignKey(Member, on_delete=models.CASCADE, related_name="farms")
-    farm_name = models.CharField(max_length=255, blank=True, null=True)
-    size_hectares = models.DecimalField(max_digits=10, decimal_places=2)
-    trees_count = models.PositiveIntegerField(blank=True, null=True, verbose_name=_("Number of Trees"))
-    latitude = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True)
-    longitude = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True)
-
-    class Meta:
-        verbose_name = _("Farm")
-        verbose_name_plural = _("Farms")
-
-    def __str__(self):
-        return self.farm_name or f"Farm of {self.member.first_name} {self.member.last_name}"
-
-class ProductionRecord(models.Model):
-    unique_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, db_index=True)
-
-    CROP_TYPE_CHOICES = (
-        ("coffee", _("Coffee")),
-        ("cocoa", _("Cocoa")),
+    POSITION_CHOICES = (
+        ("chairperson", _("Chairperson")),
+        ("vice_chairperson", _("Vice-Chairperson")),
+        ("secretary", _("Secretary")),
+        ("treasurer", _("Treasurer")),
+        ("member", _("Board Member")),
+        ("supervisor", _("Supervisory Committee Member")),
     )
 
-    RECORD_TYPE_GENERIC = "generic"
-    RECORD_TYPE_CHERRY = "cherry_delivery"
-    RECORD_TYPE_CHOICES = (
-        (RECORD_TYPE_GENERIC, _("Generic")),
-        (RECORD_TYPE_CHERRY, _("Cherry Delivery")),
+    unique_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, db_index=True)
+    cooperative = models.ForeignKey(
+        Cooperative, on_delete=models.CASCADE, related_name="board_members"
+    )
+    member = models.ForeignKey(
+        Member,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="board_positions",
+    )
+    position = models.CharField(max_length=30, choices=POSITION_CHOICES)
+    term_start = models.DateField()
+    term_end = models.DateField(blank=True, null=True)
+    # For KPI: gender & youth of board members
+    gender = models.CharField(max_length=10, choices=GENDER_CHOICES)
+    is_youth = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = _("Board Member")
+        verbose_name_plural = _("Board Members")
+
+    def __str__(self):
+        return f"{self.cooperative} – {self.get_position_display()}"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Training Record (TOR §3.1 KPI – training hours)
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TrainingRecord(models.Model):
+    """Records training events and participation for KPI tracking."""
+
+    unique_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, db_index=True)
+    cooperative = models.ForeignKey(
+        Cooperative, on_delete=models.CASCADE, related_name="training_records"
+    )
+    title = models.CharField(max_length=255)
+    training_date = models.DateField()
+    duration_hours = models.DecimalField(
+        max_digits=6,
+        decimal_places=1,
+        validators=[MinValueValidator(Decimal("0.5"))],
+    )
+    provider = models.CharField(max_length=255, blank=True)
+    topic = models.CharField(max_length=255, blank=True)
+    # Participants
+    total_participants = models.PositiveIntegerField(default=0)
+    female_participants = models.PositiveIntegerField(default=0)
+    youth_participants = models.PositiveIntegerField(default=0)
+    notes = models.TextField(blank=True)
+
+    class Meta:
+        verbose_name = _("Training Record")
+        verbose_name_plural = _("Training Records")
+        ordering = ["-training_date"]
+
+    def __str__(self):
+        return f"{self.title} ({self.training_date})"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SACCO Financial Summary (periodic snapshot – basis for KPIs)
+# TOR §3.1 – KPIs: revenue, delinquency rate, liquidity ratios, capital
+# ─────────────────────────────────────────────────────────────────────────────
+
+class SACCOFinancialSummary(models.Model):
+    """
+    Period-end financial snapshot for a SACCO.
+    Stores the raw numbers from which all financial KPIs are computed
+    (delinquency rate, PAR, liquidity ratio, ROA, capital adequacy, etc.).
+
+    One record per cooperative per reporting period.
+    """
+
+    PERIOD_MONTHLY = "monthly"
+    PERIOD_QUARTERLY = "quarterly"
+    PERIOD_ANNUAL = "annual"
+
+    PERIOD_CHOICES = (
+        (PERIOD_MONTHLY, _("Monthly")),
+        (PERIOD_QUARTERLY, _("Quarterly")),
+        (PERIOD_ANNUAL, _("Annual")),
     )
 
-    farm = models.ForeignKey(Farm, on_delete=models.CASCADE, related_name="production_records", blank=True, null=True)
-    station = models.ForeignKey(WashingStation, on_delete=models.SET_NULL, related_name="production_records", blank=True, null=True)
-    member = models.ForeignKey(Member, on_delete=models.SET_NULL, related_name="production_records", blank=True, null=True)
-
-    record_type = models.CharField(max_length=20, choices=RECORD_TYPE_CHOICES, default=RECORD_TYPE_GENERIC, db_index=True)
-
-    crop_type = models.CharField(max_length=50, choices=CROP_TYPE_CHOICES)
-    harvest_date = models.DateField(blank=True, null=True)
-    purchase_date = models.DateField(blank=True, null=True)
-    reception_date = models.DateField(blank=True, null=True)
-
-    quantity_kg = models.DecimalField(max_digits=10, decimal_places=2)
-    quality_grade = models.CharField(max_length=50, blank=True, null=True)
-
-    receipt_number = models.CharField(max_length=50, blank=True, null=True)
-    base_price_fc = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
-    total_price_fc = models.DecimalField(max_digits=14, decimal_places=2, blank=True, null=True)
-    exchange_rate_fc_usd = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
-    cherry_register_number = models.CharField(max_length=50, blank=True, null=True)
-    delivery_report_number = models.CharField(max_length=50, blank=True, null=True)
-
-    sync_uuid = models.UUIDField(default=uuid.uuid4, editable=False, null=True, blank=True, db_index=True)
-    is_locally_created = models.BooleanField(default=False)
-    participants = models.ManyToManyField(User, related_name="production_records_participated", blank=True)
-
-    class Meta:
-        verbose_name = _("Production Record")
-        verbose_name_plural = _("Production Records")
-        ordering = ["-harvest_date"]
-
-    def __str__(self):
-        if self.record_type == self.RECORD_TYPE_CHERRY:
-            return _("%(qty)s kg cherry delivery for %(member)s at %(station)s") % {
-                "qty": self.quantity_kg,
-                "member": self.member or _("Unknown member"),
-                "station": self.station or _("Unknown station"),
-            }
-        return f"{self.crop_type} production on {self.farm} on {self.harvest_date}"
-
-    def clean(self):
-        from django.core.exceptions import ValidationError
-        from django.utils import timezone
-
-        errors = {}
-
-        if self.quantity_kg is not None and self.quantity_kg <= 0:
-            errors["quantity_kg"] = _("Quantity must be greater than zero.")
-
-        if self.record_type == self.RECORD_TYPE_GENERIC:
-            if not self.farm:
-                errors["farm"] = _("Farm is required for generic production records.")
-            if self.harvest_date:
-                if self.harvest_date > timezone.now().date():
-                    errors["harvest_date"] = _("Harvest date cannot be in the future.")
-            else:
-                errors["harvest_date"] = _("Harvest date is required for generic production records.")
-
-        if self.record_type == self.RECORD_TYPE_CHERRY:
-            if not self.station:
-                errors["station"] = _("Washing station is required for cherry deliveries.")
-            if not self.member:
-                errors["member"] = _("Member is required for cherry deliveries.")
-            if not self.purchase_date:
-                errors["purchase_date"] = _("Purchase date is required for cherry deliveries.")
-            if not self.receipt_number:
-                errors["receipt_number"] = _("Receipt number is required for cherry deliveries.")
-            if self.base_price_fc is None:
-                errors["base_price_fc"] = _("Base price (FC) is required for cherry deliveries.")
-
-        if errors:
-            raise ValidationError(errors)
-
-    def save(self, *args, **kwargs):
-        if self.record_type == self.RECORD_TYPE_CHERRY and self.quantity_kg is not None and self.base_price_fc is not None:
-            # total_price_fc stored for offline/reporting convenience
-            self.total_price_fc = self.quantity_kg * self.base_price_fc
-        super().save(*args, **kwargs)
-
-class FinancialRecord(models.Model):
     unique_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, db_index=True)
-
-    TRANSACTION_TYPE_CHOICES = (
-        ("income", _("Income")),
-        ("expense", _("Expense")),
-        ("loan", _("Loan")),
-        ("dividend", _("Dividend")),
-        ("other", _("Other")),
+    cooperative = models.ForeignKey(
+        Cooperative, on_delete=models.CASCADE, related_name="financial_summaries"
     )
-    cooperative = models.ForeignKey(Cooperative, on_delete=models.CASCADE, related_name="financial_records")
-    transaction_date = models.DateField()
-    transaction_type = models.CharField(max_length=50, choices=TRANSACTION_TYPE_CHOICES)
-    amount = models.DecimalField(max_digits=12, decimal_places=2)
-    description = models.TextField(blank=True, null=True)
+    period_type = models.CharField(max_length=15, choices=PERIOD_CHOICES)
+    period_start = models.DateField()
+    period_end = models.DateField()
+    submitted_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True
+    )
+    submitted_at = models.DateTimeField(auto_now_add=True)
+    is_verified = models.BooleanField(default=False)
+    verified_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="verified_summaries",
+    )
+
+    # ── Balance Sheet items ───────────────────────────────────────────────────
+    total_assets = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    total_liabilities = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    total_equity = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    share_capital = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    retained_earnings = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    # Savings / deposits
+    total_savings = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    total_deposits = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+
+    # ── Loan Portfolio ────────────────────────────────────────────────────────
+    gross_loan_portfolio = models.DecimalField(
+        max_digits=15, decimal_places=2, default=0
+    )
+    loans_disbursed_period = models.DecimalField(
+        max_digits=15, decimal_places=2, default=0,
+        help_text=_("Total loans disbursed during this period"),
+    )
+    loan_repayments_received = models.DecimalField(
+        max_digits=15, decimal_places=2, default=0
+    )
+    # Portfolio at Risk (PAR) values – TOR KPI: delinquency rate
+    par_30_days = models.DecimalField(
+        max_digits=15, decimal_places=2, default=0,
+        help_text=_("Outstanding balance of loans overdue > 30 days"),
+    )
+    par_90_days = models.DecimalField(
+        max_digits=15, decimal_places=2, default=0,
+        help_text=_("Outstanding balance of loans overdue > 90 days"),
+    )
+    write_offs_period = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    loan_loss_provisions = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+
+    # ── Income Statement ──────────────────────────────────────────────────────
+    interest_income = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    fee_income = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    other_income = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    total_income = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    operating_expenses = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    interest_expense = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    net_surplus = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+
+    # ── Membership snapshot ───────────────────────────────────────────────────
+    total_members = models.PositiveIntegerField(default=0)
+    active_borrowers = models.PositiveIntegerField(default=0)
+    active_savers = models.PositiveIntegerField(default=0)
+    new_members_period = models.PositiveIntegerField(default=0)
+    female_members = models.PositiveIntegerField(default=0)
+    youth_members = models.PositiveIntegerField(default=0)
+
+    # ── Computed KPI fields (populated by Celery task after submission) ───────
+    # Stored so dashboards don't need to recompute every time
+    kpi_delinquency_rate = models.DecimalField(
+        max_digits=6, decimal_places=4, null=True, blank=True,
+        help_text=_("PAR30 / Gross Loan Portfolio"),
+    )
+    kpi_liquidity_ratio = models.DecimalField(
+        max_digits=6, decimal_places=4, null=True, blank=True,
+        help_text=_("Liquid Assets / Total Deposits"),
+    )
+    kpi_capital_adequacy = models.DecimalField(
+        max_digits=6, decimal_places=4, null=True, blank=True,
+        help_text=_("Total Equity / Total Assets"),
+    )
+    kpi_roa = models.DecimalField(
+        max_digits=6, decimal_places=4, null=True, blank=True,
+        help_text=_("Net Surplus / Average Total Assets"),
+    )
+    kpi_cost_per_borrower = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True,
+        help_text=_("Operating Expenses / Active Borrowers"),
+    )
+    kpi_portfolio_yield = models.DecimalField(
+        max_digits=6, decimal_places=4, null=True, blank=True,
+        help_text=_("Interest Income / Average Gross Loan Portfolio"),
+    )
+    kpi_operational_self_sufficiency = models.DecimalField(
+        max_digits=6, decimal_places=4, null=True, blank=True,
+        help_text=_("Total Income / (Operating + Loan Loss + Interest Expenses)"),
+    )
+    kpi_youth_participation_rate = models.DecimalField(
+        max_digits=6, decimal_places=4, null=True, blank=True,
+        help_text=_("Youth Members / Total Members"),
+    )
+    kpi_female_participation_rate = models.DecimalField(
+        max_digits=6, decimal_places=4, null=True, blank=True,
+    )
+    kpi_training_hours_per_member = models.DecimalField(
+        max_digits=6, decimal_places=2, null=True, blank=True,
+    )
+
+    notes = models.TextField(blank=True)
 
     class Meta:
-        verbose_name = _("Financial Record")
-        verbose_name_plural = _("Financial Records")
-        ordering = ["-transaction_date"]
+        verbose_name = _("SACCO Financial Summary")
+        verbose_name_plural = _("SACCO Financial Summaries")
+        unique_together = ("cooperative", "period_type", "period_start")
+        ordering = ["-period_end"]
 
     def __str__(self):
-        return f"{self.transaction_type} of {self.amount} for {self.cooperative} on {self.transaction_date}"
+        return (
+            f"{self.cooperative.name} | "
+            f"{self.get_period_type_display()} | "
+            f"{self.period_start} – {self.period_end}"
+        )
+
+    def compute_kpis(self):
+        """
+        Populate computed KPI fields from the raw financial data.
+        Called by a Celery task after submission or verification.
+        """
+        def safe_div(numerator, denominator):
+            if denominator and denominator != 0:
+                return round(numerator / denominator, 4)
+            return None
+
+        self.kpi_delinquency_rate = safe_div(self.par_30_days, self.gross_loan_portfolio)
+        self.kpi_capital_adequacy = safe_div(self.total_equity, self.total_assets)
+        self.kpi_roa = safe_div(self.net_surplus, self.total_assets)
+        self.kpi_youth_participation_rate = safe_div(self.youth_members, self.total_members)
+        self.kpi_female_participation_rate = safe_div(self.female_members, self.total_members)
+
+        liquid_assets = self.total_assets - self.gross_loan_portfolio  # simplified
+        self.kpi_liquidity_ratio = safe_div(liquid_assets, self.total_deposits)
+
+        self.kpi_portfolio_yield = safe_div(
+            self.interest_income, self.gross_loan_portfolio
+        )
+        if self.active_borrowers and self.active_borrowers > 0:
+            self.kpi_cost_per_borrower = round(
+                self.operating_expenses / self.active_borrowers, 2
+            )
+
+        total_costs = (
+            self.operating_expenses + self.loan_loss_provisions + self.interest_expense
+        )
+        self.kpi_operational_self_sufficiency = safe_div(self.total_income, total_costs)
+
+        self.save(
+            update_fields=[
+                "kpi_delinquency_rate",
+                "kpi_liquidity_ratio",
+                "kpi_capital_adequacy",
+                "kpi_roa",
+                "kpi_cost_per_borrower",
+                "kpi_portfolio_yield",
+                "kpi_operational_self_sufficiency",
+                "kpi_youth_participation_rate",
+                "kpi_female_participation_rate",
+            ]
+        )
 
 
-class Buyer(models.Model):
+# ─────────────────────────────────────────────────────────────────────────────
+# Savings Account
+# ─────────────────────────────────────────────────────────────────────────────
+
+class SavingsAccount(models.Model):
+    """Member savings / share account within a SACCO."""
+
+    ACCOUNT_TYPE_SHARES = "shares"
+    ACCOUNT_TYPE_SAVINGS = "savings"
+    ACCOUNT_TYPE_FIXED = "fixed_deposit"
+    ACCOUNT_TYPE_HOLIDAY = "holiday"
+
+    ACCOUNT_TYPES = (
+        (ACCOUNT_TYPE_SHARES, _("Share Capital Account")),
+        (ACCOUNT_TYPE_SAVINGS, _("Voluntary Savings Account")),
+        (ACCOUNT_TYPE_FIXED, _("Fixed / Term Deposit")),
+        (ACCOUNT_TYPE_HOLIDAY, _("Holiday / Club Savings")),
+    )
+
     unique_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, db_index=True)
-    name = models.CharField(max_length=255)
-    country = models.CharField(max_length=100, blank=True, null=True)
-    email = models.EmailField(blank=True, null=True)
-    phone = models.CharField(max_length=50, blank=True, null=True)
+    member = models.ForeignKey(
+        Member, on_delete=models.CASCADE, related_name="savings_accounts"
+    )
+    account_number = models.CharField(max_length=50)
+    account_type = models.CharField(max_length=20, choices=ACCOUNT_TYPES)
+    balance = models.DecimalField(
+        max_digits=12, decimal_places=2, default=Decimal("0.00")
+    )
+    interest_rate = models.DecimalField(
+        max_digits=5, decimal_places=4, default=Decimal("0.00"),
+        help_text=_("Annual interest rate, e.g. 0.0350 = 3.50%"),
+    )
+    opened_date = models.DateField()
+    is_active = models.BooleanField(default=True)
+    # Mambu reference
+    mambu_encoded_key = models.CharField(max_length=100, blank=True, null=True)
 
     class Meta:
-        verbose_name = _("Buyer")
-        verbose_name_plural = _("Buyers")
-        ordering = ["name"]
+        verbose_name = _("Savings Account")
+        verbose_name_plural = _("Savings Accounts")
+        unique_together = ("member", "account_number")
 
     def __str__(self):
-        return self.name
+        return f"{self.member} – {self.get_account_type_display()} ({self.account_number})"
 
 
-class CooperativeCertificate(models.Model):
+# ─────────────────────────────────────────────────────────────────────────────
+# Loan Account
+# ─────────────────────────────────────────────────────────────────────────────
+
+class LoanAccount(models.Model):
+    """Individual member loan — feeds into delinquency and PAR KPIs."""
+
+    STATUS_ACTIVE = "active"
+    STATUS_CLOSED = "closed"
+    STATUS_WRITTEN_OFF = "written_off"
+    STATUS_RESTRUCTURED = "restructured"
+
+    STATUS_CHOICES = (
+        (STATUS_ACTIVE, _("Active")),
+        (STATUS_CLOSED, _("Closed / Repaid")),
+        (STATUS_WRITTEN_OFF, _("Written Off")),
+        (STATUS_RESTRUCTURED, _("Restructured")),
+    )
+
     unique_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, db_index=True)
-    cooperative = models.ForeignKey(Cooperative, on_delete=models.CASCADE, related_name="certificates")
-    name = models.CharField(max_length=255)
-    issuer = models.CharField(max_length=255, blank=True, null=True)
-    issued_date = models.DateField(blank=True, null=True)
-    expires_date = models.DateField(blank=True, null=True)
-    document = models.FileField(upload_to="cooperative_certificates/")
-    notes = models.TextField(blank=True, null=True)
+    member = models.ForeignKey(
+        Member, on_delete=models.CASCADE, related_name="loan_accounts"
+    )
+    loan_id = models.CharField(max_length=50, unique=True)
+    disbursement_date = models.DateField()
+    principal_amount = models.DecimalField(max_digits=12, decimal_places=2)
+    interest_rate = models.DecimalField(
+        max_digits=5, decimal_places=4,
+        help_text=_("Annual interest rate"),
+    )
+    term_months = models.PositiveIntegerField()
+    outstanding_balance = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    arrears_amount = models.DecimalField(
+        max_digits=12, decimal_places=2, default=0,
+        help_text=_("Total amount in arrears (overdue)"),
+    )
+    days_in_arrears = models.PositiveIntegerField(default=0)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_ACTIVE)
+    purpose = models.CharField(max_length=255, blank=True)
+    maturity_date = models.DateField(blank=True, null=True)
+    # Mambu reference
+    mambu_encoded_key = models.CharField(max_length=100, blank=True, null=True)
 
     class Meta:
-        verbose_name = _("Cooperative Certificate")
-        verbose_name_plural = _("Cooperative Certificates")
-        ordering = ["-issued_date"]
+        verbose_name = _("Loan Account")
+        verbose_name_plural = _("Loan Accounts")
+        ordering = ["-disbursement_date"]
 
     def __str__(self):
-        return f"{self.name} ({self.cooperative})"
+        return f"Loan {self.loan_id} – {self.member} (SZL {self.outstanding_balance})"
 
+    @property
+    def is_delinquent(self) -> bool:
+        return self.days_in_arrears > 0
 
-class CooperativeSale(models.Model):
-    unique_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, db_index=True)
-    cooperative = models.ForeignKey(Cooperative, on_delete=models.CASCADE, related_name="sales")
-    buyer = models.ForeignKey(Buyer, on_delete=models.PROTECT, related_name="sales")
-
-    year = models.PositiveIntegerField()
-    grade = models.CharField(max_length=50)
-    destination_country = models.CharField(max_length=100)
-    quantity_kg = models.DecimalField(max_digits=12, decimal_places=2)
-    price_per_kg = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
-    total_value = models.DecimalField(max_digits=14, decimal_places=2, blank=True, null=True)
-    arrival_date = models.DateField(blank=True, null=True)
-    notes = models.TextField(blank=True, null=True)
-
-    class Meta:
-        verbose_name = _("Cooperative Sale")
-        verbose_name_plural = _("Cooperative Sales")
-        ordering = ["-year", "-quantity_kg"]
-
-    def __str__(self):
-        return f"{self.cooperative} → {self.buyer} ({self.year})"
-
-    def clean(self):
-        from django.core.exceptions import ValidationError
-
-        if self.quantity_kg is not None and self.quantity_kg <= 0:
-            raise ValidationError({"quantity_kg": _("Quantity must be positive.")})
-
-    def save(self, *args, **kwargs):
-        if self.price_per_kg is not None and self.quantity_kg is not None:
-            self.total_value = self.price_per_kg * self.quantity_kg
-        super().save(*args, **kwargs)
+    @property
+    def is_par30(self) -> bool:
+        return self.days_in_arrears >= 30

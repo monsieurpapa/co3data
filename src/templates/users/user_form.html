@@ -1,201 +1,82 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 {% load i18n %}
-{% load crispy_forms_tags %}
-
-{% block title %}
-    {% if form.instance.pk %}
-        {% trans "Modifier Utilisateur" %} | CO3DATA
-    {% else %}
-        {% trans "Créer Utilisateur" %} | CO3DATA
-    {% endif %}
-{% endblock %}
-
+{% block title %}{% if form.instance.pk %}{% trans "Edit User" %}{% else %}{% trans "Add User" %}{% endif %} – CoopData{% endblock %}
 {% block breadcrumb %}
-    <li class="breadcrumb-item"><a href="{% url 'analytics:dashboard' %}">{% trans "Accueil" %}</a></li>
-    <li class="breadcrumb-item"><a href="{% url 'users:user_list' %}">{% trans "Utilisateurs" %}</a></li>
-    <li class="breadcrumb-item active" aria-current="page">
-        {% if form.instance.pk %}
-            {% trans "Modifier" %}
-        {% else %}
-            {% trans "Créer" %}
-        {% endif %}
-    </li>
+<li class="breadcrumb-item"><a href="{% url 'users:user_list' %}">{% trans "Users" %}</a></li>
+<li class="breadcrumb-item active">{% if form.instance.pk %}{% trans "Edit" %}{% else %}{% trans "New User" %}{% endif %}</li>
 {% endblock %}
-
 {% block content %}
-<div class="row gx-3">
-    <div class="col-lg-8">
-        <div class="card mb-3">
-            <div class="card-header bg-light">
-                <h5 class="mb-0">
-                    {% if form.instance.pk %}
-                        {% trans "Modifier Utilisateur" %} - {{ form.instance.get_full_name }}
-                    {% else %}
-                        {% trans "Créer Nouvel Utilisateur" %}
-                    {% endif %}
-                </h5>
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white fw-semibold">
+        {% if form.instance.pk %}{% trans "Edit User" %}{% else %}{% trans "Create New User" %}{% endif %}
+      </div>
+      <div class="card-body">
+        <form method="post" novalidate>
+          {% csrf_token %}
+          {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+ 
+          <h6 class="text-uppercase small text-muted fw-semibold border-bottom pb-2 mb-3">{% trans "Identity" %}</h6>
+          <div class="row g-3 mb-4">
+            {% if not form.instance.pk %}
+            <div class="col-md-6"><label class="form-label small fw-semibold">{% trans "Username" %} *</label>{{ form.username }}{% if form.username.errors %}<div class="invalid-feedback d-block">{{ form.username.errors.0 }}</div>{% endif %}</div>
+            {% endif %}
+            <div class="col-md-6"><label class="form-label small fw-semibold">{% trans "First Name" %}</label>{{ form.first_name }}</div>
+            <div class="col-md-6"><label class="form-label small fw-semibold">{% trans "Last Name" %}</label>{{ form.last_name }}</div>
+            <div class="col-md-6"><label class="form-label small fw-semibold">{% trans "Email" %}</label>{{ form.email }}</div>
+            <div class="col-md-6"><label class="form-label small fw-semibold">{% trans "Phone Number" %}</label>{{ form.phone_number }}</div>
+          </div>
+ 
+          {% if not form.instance.pk %}
+          <h6 class="text-uppercase small text-muted fw-semibold border-bottom pb-2 mb-3">{% trans "Password" %}</h6>
+          <div class="row g-3 mb-4">
+            <div class="col-md-6"><label class="form-label small fw-semibold">{% trans "Password" %} *</label>{{ form.password1 }}{% if form.password1.errors %}<div class="invalid-feedback d-block">{{ form.password1.errors.0 }}</div>{% endif %}</div>
+            <div class="col-md-6"><label class="form-label small fw-semibold">{% trans "Confirm Password" %} *</label>{{ form.password2 }}{% if form.password2.errors %}<div class="invalid-feedback d-block">{{ form.password2.errors.0 }}</div>{% endif %}</div>
+          </div>
+          {% endif %}
+ 
+          <h6 class="text-uppercase small text-muted fw-semibold border-bottom pb-2 mb-3">{% trans "Access & Preferences" %}</h6>
+          <div class="row g-3 mb-4">
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold">{% trans "Role" %} *
+                <i class="bi bi-info-circle" title="{% trans 'System Admin and Government roles require 2FA' %}"></i>
+              </label>
+              {{ form.role }}
             </div>
-            <div class="card-body">
-                <form method="post" class="needs-validation" novalidate>
-                    {% csrf_token %}
-                    
-                    <!-- Personal Information Section -->
-                    <h6 class="mb-3 border-bottom pb-2">{% trans "Informations Personnelles" %}</h6>
-                    <div class="row gx-3">
-                        <div class="col-md-6 mb-3">
-                            {{ form.first_name|as_crispy_field }}
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            {{ form.last_name|as_crispy_field }}
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            {{ form.email|as_crispy_field }}
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            {{ form.username|as_crispy_field }}
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            {{ form.phone_number|as_crispy_field }}
-                        </div>
-                    </div>
-
-                    <!-- Access Control Section -->
-                    <h6 class="mb-3 border-bottom pb-2">{% trans "Contrôle d'Accès" %}</h6>
-                    <div class="row gx-3">
-                        <div class="col-md-6 mb-3">
-                            {{ form.role|as_crispy_field }}
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            {{ form.region|as_crispy_field }}
-                        </div>
-                    </div>
-
-                    <!-- Password Section -->
-                    <h6 class="mb-3 border-bottom pb-2">
-                        {% if form.instance.pk %}
-                            {% trans "Changer le Mot de Passe" %} ({% trans "optionnel" %})
-                        {% else %}
-                            {% trans "Mot de Passe" %}
-                        {% endif %}
-                    </h6>
-                    <div class="row gx-3">
-                        <div class="col-md-6 mb-3">
-                            {{ form.password|as_crispy_field }}
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            {{ form.password_confirm|as_crispy_field }}
-                        </div>
-                    </div>
-
-                    {% if form.non_field_errors %}
-                    <div class='alert alert-danger alert-dismissible fade show' role='alert'>
-                        <strong>{% trans "Erreur lors de la validation du formulaire:" %}</strong>
-                        <ul class="mb-0 mt-2">
-                            {% for error in form.non_field_errors %}
-                            <li>{{ error }}</li>
-                            {% endfor %}
-                        </ul>
-                        <button type='button' class='btn-close' data-bs-dismiss='alert' aria-label='Close'></button>
-                    </div>
-                    {% endif %}
-
-                    <div class="d-grid gap-2 d-sm-flex justify-content-sm-end mt-4">
-                        <a href="{% url 'users:user_list' %}" class="btn btn-secondary">
-                            <span class="fas fa-times me-1"></span>{% trans "Annuler" %}
-                        </a>
-                        <button type="submit" class="btn btn-falcon-primary">
-                            <span class="fas fa-check me-1"></span>
-                            {% if form.instance.pk %}
-                                {% trans "Mettre à Jour" %}
-                            {% else %}
-                                {% trans "Créer Utilisateur" %}
-                            {% endif %}
-                        </button>
-                    </div>
-                </form>
+            <div class="col-md-6"><label class="form-label small fw-semibold">{% trans "Region" %}</label>{{ form.region }}</div>
+            <div class="col-md-6"><label class="form-label small fw-semibold">{% trans "Preferred Language" %}</label>{{ form.preferred_language }}</div>
+            {% if form.instance.pk %}
+            <div class="col-md-6 d-flex align-items-end gap-3 pb-1">
+              <div class="form-check">{{ form.is_active }}<label class="form-check-label small" for="{{ form.is_active.id_for_label }}">{% trans "Active" %}</label></div>
+              <div class="form-check">{{ form.force_password_change }}<label class="form-check-label small" for="{{ form.force_password_change.id_for_label }}">{% trans "Force password reset" %}</label></div>
             </div>
-        </div>
+            {% endif %}
+          </div>
+ 
+          <h6 class="text-uppercase small text-muted fw-semibold border-bottom pb-2 mb-3">{% trans "Inclusion Flags" %}</h6>
+          <div class="d-flex gap-4 mb-4">
+            <div class="form-check">{{ form.is_youth }}<label class="form-check-label small" for="{{ form.is_youth.id_for_label }}">{% trans "Youth (18–35)" %}</label></div>
+            <div class="form-check">{{ form.is_marginalized }}<label class="form-check-label small" for="{{ form.is_marginalized.id_for_label }}">{% trans "Marginalized Group" %}</label></div>
+          </div>
+ 
+          {% if form.instance.pk and form.instance.requires_2fa %}
+          <div class="alert alert-info d-flex gap-2 align-items-start small">
+            <i class="bi bi-shield-lock mt-1"></i>
+            <span>{% trans "This user's role requires 2FA." %}
+              {% if form.instance.is_2fa_enrolled %}{% trans "2FA is enrolled." %}
+              {% else %}<strong>{% trans "2FA not yet enrolled. User must set it up on first login." %}</strong>{% endif %}
+            </span>
+          </div>
+          {% endif %}
+ 
+          <div class="d-flex justify-content-end gap-2">
+            <a href="{% url 'users:user_list' %}" class="btn btn-outline-secondary">{% trans "Cancel" %}</a>
+            <button type="submit" class="btn btn-primary">{% if form.instance.pk %}{% trans "Save Changes" %}{% else %}{% trans "Create User" %}{% endif %}</button>
+          </div>
+        </form>
+      </div>
     </div>
-
-    <!-- Side Panel -->
-    <div class="col-lg-4">
-        <div class="card">
-            <div class="card-header bg-light">
-                <h6 class="mb-0">{% trans "Champs Requis" %}</h6>
-            </div>
-            <div class="card-body">
-                <ul class="list-unstyled small text-muted">
-                    <li class="mb-2">
-                        <span class="badge bg-danger me-2">*</span>
-                        <strong>{% trans "Prénom" %}</strong> - {% trans "Prénom de l'utilisateur" %}
-                    </li>
-                    <li class="mb-2">
-                        <span class="badge bg-danger me-2">*</span>
-                        <strong>{% trans "Nom de Famille" %}</strong> - {% trans "Nom de l'utilisateur" %}
-                    </li>
-                    <li class="mb-2">
-                        <span class="badge bg-danger me-2">*</span>
-                        <strong>{% trans "Adresse Email" %}</strong> - {% trans "Email unique de l'utilisateur" %}
-                    </li>
-                    <li class="mb-2">
-                        <span class="badge bg-danger me-2">*</span>
-                        <strong>{% trans "Nom d'Utilisateur" %}</strong> - {% trans "Identifiant unique pour la connexion" %}
-                    </li>
-                    <li class="mb-2">
-                        <span class="badge bg-danger me-2">*</span>
-                        <strong>{% trans "Rôle" %}</strong> - {% trans "Position de l'utilisateur dans le système" %}
-                    </li>
-                    <li class="mb-2">
-                        <span class="badge bg-danger me-2">*</span>
-                        <strong>{% trans "Région" %}</strong> - {% trans "Région assignée à l'utilisateur" %}
-                    </li>
-                    <li>
-                        <span class="badge bg-secondary me-2">O</span>
-                        <strong>{% trans "Téléphone" %}</strong> - {% trans "Numéro de téléphone de contact" %}
-                    </li>
-                </ul>
-                <div class="mt-3 pt-3 border-top small text-muted">
-                    <p class="mb-2">
-                        <strong>{% trans "Notes sur le Mot de Passe:" %}</strong>
-                    </p>
-                    <ul class="ps-3">
-                        <li>{% trans "Minimum 8 caractères" %}</li>
-                        <li>{% trans "Ne peut pas être purement numérique" %}</li>
-                        <li>{% trans "La confirmation doit correspondre" %}</li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-
-        {% if form.instance.pk %}
-        <div class="card mt-3">
-            <div class="card-header bg-light">
-                <h6 class="mb-0">{% trans "Informations du Compte" %}</h6>
-            </div>
-            <div class="card-body small">
-                <p class="mb-2">
-                    <span class="text-muted">{% trans "Compte créé:" %}</span><br>
-                    {{ form.instance.date_joined|date:"d/m/Y H:i" }}
-                </p>
-                <p class="mb-2">
-                    <span class="text-muted">{% trans "Dernière connexion:" %}</span><br>
-                    {% if form.instance.last_login %}
-                        {{ form.instance.last_login|date:"d/m/Y H:i" }}
-                    {% else %}
-                        {% trans "Jamais connecté" %}
-                    {% endif %}
-                </p>
-                <p class="mb-0">
-                    <span class="text-muted">{% trans "Statut:" %}</span><br>
-                    {% if form.instance.is_active %}
-                        <span class="badge badge-soft-success">{% trans "Actif" %}</span>
-                    {% else %}
-                        <span class="badge badge-soft-danger">{% trans "Inactif" %}</span>
-                    {% endif %}
-                </p>
-            </div>
-        </div>
-        {% endif %}
-    </div>
+  </div>
 </div>
 {% endblock %}

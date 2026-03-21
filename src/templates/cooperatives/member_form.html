@@ -1,102 +1,133 @@
-{% extends 'base.html' %}
-{% load i18n crispy_forms_tags %}
-
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% if form.instance.pk %}{% trans "Edit Member" %}{% else %}{% trans "Register Member" %}{% endif %} – CoopData{% endblock %}
 {% block breadcrumb %}
-    <li class="breadcrumb-item"><a href="{% url 'analytics:dashboard' %}">{% trans "Accueil" %}</a></li>
-    <li class="breadcrumb-item"><a href="{% url 'cooperatives:member_list' %}">{% trans "Membres" %}</a></li>
-    <li class="breadcrumb-item active" aria-current="page">
-        {% if object %}{% trans "Modifier" %}{% else %}{% trans "Nouveau" %}{% endif %}
-    </li>
+<li class="breadcrumb-item"><a href="{% url 'cooperatives:cooperative_list' %}">{% trans "Cooperatives" %}</a></li>
+{% if cooperative %}<li class="breadcrumb-item"><a href="{% url 'cooperatives:cooperative_detail' cooperative.pk %}">{{ cooperative.name }}</a></li>{% endif %}
+<li class="breadcrumb-item active">{% if form.instance.pk %}{% trans "Edit Member" %}{% else %}{% trans "Add Member" %}{% endif %}</li>
 {% endblock %}
-
 {% block content %}
-<div class="card mb-3">
-    <div class="card-header bg-light">
-        <div class="row align-items-center">
-            <div class="col">
-                <h5 class="mb-0">
-                    {% if object %}
-                        {% trans "Modifier" %}: {{ object.first_name }} {{ object.last_name }}
-                    {% else %}
-                        {% trans "Nouveau Membre" %}
-                    {% endif %}
-                </h5>
-            </div>
-            <div class="col-auto">
-                <a href="{% url 'cooperatives:member_list' %}" class="btn btn-falcon-default btn-sm">
-                    <span class="fas fa-times me-1"></span>{% trans "Annuler" %}
-                </a>
-            </div>
-        </div>
-    </div>
-    <div class="card-body">
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white fw-semibold">
+        {% if form.instance.pk %}{% trans "Edit Member" %}{% else %}{% trans "Register New Member" %}{% endif %}
+      </div>
+      <div class="card-body">
         <form method="post" novalidate>
-            {% csrf_token %}
-            <div class="row g-3">
-                <div class="col-md-6">{{ form.first_name|as_crispy_field }}</div>
-                <div class="col-md-6">{{ form.last_name|as_crispy_field }}</div>
-                <div class="col-md-4">{{ form.member_id|as_crispy_field }}</div>
-                <div class="col-md-4">{{ form.cooperative|as_crispy_field }}</div>
-                <div class="col-md-4">{{ form.phone_number|as_crispy_field }}</div>
-                <div class="col-md-6">{{ form.gender|as_crispy_field }}</div>
-                <div class="col-md-6">{{ form.age_group|as_crispy_field }}</div>
-
-                <div class="col-md-6">{{ form.territory|as_crispy_field }}</div>
-                <div class="col-md-6">{{ form.groupement|as_crispy_field }}</div>
-                <div class="col-md-6">{{ form.village|as_crispy_field }}</div>
-                <div class="col-md-6">{{ form.subvillage|as_crispy_field }}</div>
-
-                <div class="col-12 border-top pt-3 mt-3">
-                    <h6 class="text-uppercase text-500 fs--2 mb-3">{% trans "Informations Complémentaires" %}</h6>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-check form-switch mb-3">
-                                {{ form.is_marginalized }}
-                                <label class="form-check-label fw-bold" for="{{ form.is_marginalized.id_for_label }}">
-                                    {% trans "Groupe Marginalisé" %}
-                                </label>
-                                <div class="form-text">{% trans "Cocher si le membre appartient à un groupe socialement ou économiquement marginalisé." %}</div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-check form-switch mb-2">
-                                {{ form.is_board_member }}
-                                <label class="form-check-label fw-bold" for="{{ form.is_board_member.id_for_label }}">
-                                    {% trans "Membre du Conseil" %}
-                                </label>
-                            </div>
-                            <div id="board_role_container" class="mt-2 {% if not form.is_board_member.value %}d-none{% endif %}">
-                                {{ form.board_role|as_crispy_field }}
-                            </div>
-                        </div>
-                    </div>
+          {% csrf_token %}
+          {% if form.cooperative.is_hidden %}{{ form.cooperative }}{% endif %}
+ 
+          {# Personal Information #}
+          <h6 class="text-muted text-uppercase small fw-semibold mb-3 border-bottom pb-2">{% trans "Personal Information" %}</h6>
+          <div class="row g-3 mb-4">
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold">{% trans "First Name" %} <span class="text-danger">*</span></label>
+              {{ form.first_name }}
+              {% if form.first_name.errors %}<div class="invalid-feedback d-block">{{ form.first_name.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold">{% trans "Last Name" %} <span class="text-danger">*</span></label>
+              {{ form.last_name }}
+              {% if form.last_name.errors %}<div class="invalid-feedback d-block">{{ form.last_name.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label small fw-semibold">{% trans "Member ID" %} <span class="text-danger">*</span></label>
+              {{ form.member_id }}
+              {% if form.member_id.errors %}<div class="invalid-feedback d-block">{{ form.member_id.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label small fw-semibold">{% trans "National ID" %}</label>
+              {{ form.national_id }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label small fw-semibold">{% trans "Date of Birth" %}</label>
+              {{ form.date_of_birth }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label small fw-semibold">{% trans "Phone Number" %}</label>
+              {{ form.phone_number }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label small fw-semibold">{% trans "Email" %}</label>
+              {{ form.email }}
+            </div>
+            <div class="col-12">
+              <label class="form-label small fw-semibold">{% trans "Physical Address" %}</label>
+              {{ form.physical_address }}
+            </div>
+          </div>
+ 
+          {# Inclusion & Demographics — TOR §3.1 mandatory coding #}
+          <h6 class="text-muted text-uppercase small fw-semibold mb-3 border-bottom pb-2">
+            {% trans "Demographics & Inclusion" %}
+            <span class="badge bg-warning text-dark ms-1 fw-normal" style="font-size:.65rem">{% trans "Mandatory" %}</span>
+          </h6>
+          <div class="row g-3 mb-4">
+            <div class="col-md-4">
+              <label class="form-label small fw-semibold">{% trans "Gender" %} <span class="text-danger">*</span></label>
+              {{ form.gender }}
+              {% if form.gender.errors %}<div class="invalid-feedback d-block">{{ form.gender.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label small fw-semibold">{% trans "Age Group" %} <span class="text-danger">*</span></label>
+              {{ form.age_group }}
+            </div>
+            <div class="col-md-4 d-flex align-items-end pb-1">
+              <div class="d-flex flex-column gap-2">
+                <div class="form-check">
+                  {{ form.is_youth }}
+                  <label class="form-check-label small" for="{{ form.is_youth.id_for_label }}">
+                    {% trans "Youth (18–35)" %}
+                    <span class="text-muted">{% trans "(auto-set from age group)" %}</span>
+                  </label>
                 </div>
+                <div class="form-check">
+                  {{ form.is_marginalized }}
+                  <label class="form-check-label small" for="{{ form.is_marginalized.id_for_label }}">
+                    {% trans "Marginalized Group" %}
+                  </label>
+                </div>
+                <div class="form-check">
+                  {{ form.is_board_member }}
+                  <label class="form-check-label small" for="{{ form.is_board_member.id_for_label }}">
+                    {% trans "Board / Committee Member" %}
+                  </label>
+                </div>
+              </div>
             </div>
-            
-            <div class="mt-4 text-end">
-                <button type="submit" class="btn btn-primary px-5">
-                    <span class="fas fa-save me-2"></span>
-                    {% if object %}{% trans "Enregistrer les modifications" %}{% else %}{% trans "Créer le Membre" %}{% endif %}
-                </button>
+          </div>
+ 
+          {# Status (edit mode only) #}
+          {% if form.instance.pk %}
+          <h6 class="text-muted text-uppercase small fw-semibold mb-3 border-bottom pb-2">{% trans "Membership Status" %}</h6>
+          <div class="row g-3 mb-4">
+            <div class="col-md-2 d-flex align-items-center">
+              <div class="form-check">
+                {{ form.is_active }}
+                <label class="form-check-label small" for="{{ form.is_active.id_for_label }}">{% trans "Active" %}</label>
+              </div>
             </div>
+            <div class="col-md-4">
+              <label class="form-label small fw-semibold">{% trans "Exit Date" %}</label>
+              {{ form.exit_date }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold">{% trans "Exit Reason" %}</label>
+              {{ form.exit_reason }}
+            </div>
+          </div>
+          {% endif %}
+ 
+          <div class="d-flex justify-content-end gap-2">
+            <a href="javascript:history.back()" class="btn btn-outline-secondary">{% trans "Cancel" %}</a>
+            <button type="submit" class="btn btn-primary">
+              {% if form.instance.pk %}{% trans "Save Changes" %}{% else %}{% trans "Register Member" %}{% endif %}
+            </button>
+          </div>
         </form>
+      </div>
     </div>
+  </div>
 </div>
-
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const boardSwitch = document.querySelector('#{{ form.is_board_member.id_for_label }}');
-        const roleContainer = document.querySelector('#board_role_container');
-        
-        if (boardSwitch && roleContainer) {
-            boardSwitch.addEventListener('change', function() {
-                if (this.checked) {
-                    roleContainer.classList.remove('d-none');
-                } else {
-                    roleContainer.classList.add('d-none');
-                }
-            });
-        }
-    });
-</script>
 {% endblock %}

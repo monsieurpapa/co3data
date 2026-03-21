@@ -1,168 +1,144 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{{ member.first_name }} {{ member.last_name }} – CoopData{% endblock %}
 {% block breadcrumb %}
-    <li class="breadcrumb-item"><a href="{% url 'analytics:dashboard' %}">{% trans "Accueil" %}</a></li>
-    <li class="breadcrumb-item"><a href="{% url 'cooperatives:cooperative_list' %}">{% trans "Coopératives" %}</a></li>
-    <li class="breadcrumb-item"><a href="{% url 'cooperatives:cooperative_detail' member.cooperative.unique_id %}">{{ member.cooperative.name }}</a></li>
-    <li class="breadcrumb-item active" aria-current="page">{{ member.first_name }} {{ member.last_name }}</li>
+<li class="breadcrumb-item"><a href="{% url 'cooperatives:cooperative_list' %}">{% trans "Cooperatives" %}</a></li>
+<li class="breadcrumb-item"><a href="{% url 'cooperatives:cooperative_detail' member.cooperative.pk %}">{{ member.cooperative.name }}</a></li>
+<li class="breadcrumb-item active">{{ member.first_name }} {{ member.last_name }}</li>
 {% endblock %}
-
 {% block content %}
-<div class="row g-3">
-    <div class="col-lg-12">
-        <div class="card mb-3">
-            <div class="card-header bg-light">
-                <div class="row align-items-center">
-                    <div class="col">
-                        <h5 class="mb-0">{% trans "Profil du Membre" %}: {{ member.first_name }} {{ member.last_name }}</h5>
-                    </div>
-                    <div class="col-auto">
-                        <a href="{% url 'cooperatives:cooperative_detail' member.cooperative.unique_id %}" class="btn btn-falcon-default btn-sm me-2">
-                            <span class="fas fa-arrow-left me-1"></span>{% trans "Retour" %}
-                        </a>
-                        {% if user.profile.role.name in 'admin,regional_officer,manager' or user.is_superuser %}
-                        <a href="{% url 'cooperatives:member_edit' member.unique_id %}" class="btn btn-falcon-primary btn-sm">
-                            <span class="fas fa-edit me-1"></span>{% trans "Modifier" %}
-                        </a>
-                        {% endif %}
-                        {% if user.profile.role.name in 'admin,manager' or user.is_superuser %}
-                        <a href="{% url 'cooperatives:member_delete' member.unique_id %}" class="btn btn-falcon-danger btn-sm ms-2">
-                            <span class="fas fa-trash-alt me-1"></span>{% trans "Supprimer" %}
-                        </a>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-4 text-center mb-3">
-                        <div class="avatar avatar-5xl mb-3">
-                            <div class="avatar-name rounded-circle"><span>{{ member.first_name|first }}{{ member.last_name|first }}</span></div>
-                        </div>
-                        <h4 class="mb-1">{{ member.first_name }} {{ member.last_name }}</h4>
-                        <p class="text-500 fs--1">{% trans "Membre ID" %}: {{ member.member_id }}</p>
-                        <div>
-                            {% if member.is_marginalized %}
-                            <span class="badge badge-soft-warning"><i class="fas fa-hand-holding-heart me-1"></i>{% trans "Groupe Marginalisé" %}</span>
-                            {% endif %}
-                            {% if member.is_board_member %}
-                            <span class="badge badge-soft-primary"><i class="fas fa-user-tie me-1"></i>{{ member.board_role }}</span>
-                            {% endif %}
-                        </div>
-                    </div>
-                    <div class="col-md-8">
-                        <div class="row g-3">
-                            <div class="col-sm-6 border-start-sm border-200">
-                                <p class="mb-1 fw-bold text-700">{% trans "Coopérative" %}:</p>
-                                <p class="text-1000"><a href="{% url 'cooperatives:cooperative_detail' member.cooperative.unique_id %}">{{ member.cooperative.name }}</a></p>
-                                <p class="mb-1 fw-bold text-700">{% trans "Sexe" %}:</p>
-                                <p class="text-1000">{{ member.get_gender_display }}</p>
-                            </div>
-                            <div class="col-sm-6 border-start-sm border-200">
-                                <p class="mb-1 fw-bold text-700">{% trans "Groupe d'âge" %}:</p>
-                                <p class="text-1000">{{ member.get_age_group_display }}</p>
-                                <p class="mb-1 fw-bold text-700">{% trans "Téléphone" %}:</p>
-                                <p class="text-1000">{{ member.phone_number|default:"---" }}</p>
-                            </div>
-                            <div class="col-12 border-top border-200 pt-3 mt-3">
-                                <p class="mb-1 fw-bold text-700">{% trans "Membre depuis" %}:</p>
-                                <p class="text-1000">{{ member.date_joined|date:"d F Y" }}</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+<div class="d-flex justify-content-between align-items-start mb-3">
+  <div>
+    <h4 class="fw-bold mb-1">{{ member.first_name }} {{ member.last_name }}</h4>
+    <span class="badge bg-secondary me-1 font-monospace">{{ member.member_id }}</span>
+    {% if member.is_youth %}<span class="badge bg-info me-1">{% trans "Youth" %}</span>{% endif %}
+    {% if member.is_marginalized %}<span class="badge bg-secondary me-1">{% trans "Marginalized" %}</span>{% endif %}
+    {% if member.is_board_member %}<span class="badge bg-warning text-dark me-1">{% trans "Board" %}</span>{% endif %}
+    {% if not member.is_active %}<span class="badge bg-danger">{% trans "Inactive" %}</span>{% endif %}
+  </div>
+  {% if request.user.role in "system_admin,regional_officer,sacco_manager" or request.user.is_superuser %}
+  <a href="{% url 'cooperatives:member_update' member.pk %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-pencil me-1"></i>{% trans "Edit" %}
+  </a>
+  {% endif %}
+</div>
+ 
+<div class="row g-4">
+  {# Member info #}
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm p-3">
+      <h6 class="fw-semibold text-muted text-uppercase small mb-3">{% trans "Personal Details" %}</h6>
+      <dl class="row small mb-0">
+        <dt class="col-5 text-muted">{% trans "Cooperative" %}</dt>
+        <dd class="col-7"><a href="{% url 'cooperatives:cooperative_detail' member.cooperative.pk %}">{{ member.cooperative.name }}</a></dd>
+        <dt class="col-5 text-muted">{% trans "Gender" %}</dt><dd class="col-7">{{ member.get_gender_display }}</dd>
+        <dt class="col-5 text-muted">{% trans "Age Group" %}</dt><dd class="col-7">{{ member.get_age_group_display }}</dd>
+        <dt class="col-5 text-muted">{% trans "National ID" %}</dt><dd class="col-7">{{ member.national_id|default:"–" }}</dd>
+        <dt class="col-5 text-muted">{% trans "Date of Birth" %}</dt><dd class="col-7">{{ member.date_of_birth|default:"–" }}</dd>
+        <dt class="col-5 text-muted">{% trans "Phone" %}</dt><dd class="col-7">{{ member.phone_number|default:"–" }}</dd>
+        <dt class="col-5 text-muted">{% trans "Email" %}</dt><dd class="col-7">{{ member.email|default:"–" }}</dd>
+        <dt class="col-5 text-muted">{% trans "Joined" %}</dt><dd class="col-7">{{ member.date_joined }}</dd>
+      </dl>
     </div>
-
-    <!-- Data Collection -->
-    <div class="col-lg-12">
-        <div class="card mb-3">
-            <div class="card-header bg-light">
-                <h5 class="mb-0">{% trans "Collecte de Données" %}</h5>
-            </div>
-            <div class="card-body">
-                <div class="row g-3">
-                    {% for q in available_questionnaires %}
-                    <div class="col-md-6 col-xxl-4">
-                        <div class="border rounded-1 p-3 bg-white shadow-none">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <h6 class="mb-1">{{ q.title }}</h6>
-                                    <p class="mb-0 fs--1 text-600">{{ q.description|truncatewords:10 }}</p>
-                                </div>
-                                <a href="{% url 'questionnaires:questionnaire_submit' q.unique_id %}?target_id={{ member.unique_id }}" class="btn btn-falcon-primary btn-sm">
-                                    <span class="fas fa-edit me-1"></span>{% trans "Répondre" %}
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                    {% empty %}
-                    <p class="text-center text-500 py-3">{% trans "Aucun questionnaire disponible." %}</p>
-                    {% endfor %}
-                </div>
-            </div>
+  </div>
+ 
+  <div class="col-md-8">
+    {# Loan accounts #}
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <span class="fw-semibold">{% trans "Loan Accounts" %}</span>
+        <div class="d-flex align-items-center gap-2">
+          <span class="text-muted small">{% trans "Outstanding:" %} <strong>SZL {{ active_loans|floatformat:2 }}</strong></span>
+          {% if request.user.role in "system_admin,sacco_manager" or request.user.is_superuser %}
+          <a href="{% url 'cooperatives:loan_create' %}?member={{ member.pk }}" class="btn btn-sm btn-outline-primary">
+            <i class="bi bi-plus me-1"></i>{% trans "New Loan" %}
+          </a>
+          {% endif %}
         </div>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>{% trans "Loan ID" %}</th>
+              <th>{% trans "Disbursed" %}</th>
+              <th class="text-end">{% trans "Principal (SZL)" %}</th>
+              <th class="text-end">{% trans "Outstanding (SZL)" %}</th>
+              <th>{% trans "Arrears" %}</th>
+              <th>{% trans "Status" %}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for loan in loans %}
+            <tr>
+              <td class="font-monospace small">{{ loan.loan_id }}</td>
+              <td>{{ loan.disbursement_date }}</td>
+              <td class="text-end">{{ loan.principal_amount|floatformat:2 }}</td>
+              <td class="text-end {% if loan.days_in_arrears >= 30 %}text-danger fw-semibold{% endif %}">
+                {{ loan.outstanding_balance|floatformat:2 }}
+              </td>
+              <td>
+                {% if loan.days_in_arrears > 0 %}
+                <span class="badge {% if loan.days_in_arrears >= 90 %}bg-danger{% elif loan.days_in_arrears >= 30 %}bg-warning text-dark{% else %}bg-light text-dark{% endif %}">
+                  {{ loan.days_in_arrears }}d
+                </span>
+                {% else %}<span class="text-success small">{% trans "Current" %}</span>{% endif %}
+              </td>
+              <td>
+                {% if loan.status == "active" %}<span class="badge bg-success">{% trans "Active" %}</span>
+                {% elif loan.status == "closed" %}<span class="badge bg-secondary">{% trans "Closed" %}</span>
+                {% elif loan.status == "written_off" %}<span class="badge bg-danger">{% trans "Written Off" %}</span>
+                {% else %}<span class="badge bg-info">{{ loan.get_status_display }}</span>{% endif %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6" class="text-center text-muted py-3">{% trans "No loan accounts." %}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
     </div>
-
-    <!-- Production History -->
-    <div class="col-lg-12">
-        <div class="card mb-3">
-            <div class="card-header bg-light">
-                <h5 class="mb-0">{% trans "Historique de Production" %}</h5>
-            </div>
-            <div class="card-body p-0">
-                <div class="table-responsive scrollbar">
-                    <table class="table table-sm table-striped fs--1 mb-0 overflow-hidden">
-                        <thead class="bg-200 text-900">
-                            <tr>
-                                <th>{% trans "Ferme" %}</th>
-                                <th>{% trans "Produit" %}</th>
-                                <th>{% trans "Date" %}</th>
-                                <th class="text-end">{% trans "Quantité (kg)" %}</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for record in production_records %}
-                                <tr>
-                                    <td>{{ record.farm.farm_name|default:"Main Farm" }}</td>
-                                    <td>{{ record.get_crop_type_display }}</td>
-                                    <td>{{ record.harvest_date|date:"d/m/Y" }}</td>
-                                    <td class="text-end fw-bold">{{ record.quantity_kg }}</td>
-                                </tr>
-                            {% empty %}
-                                <tr>
-                                    <td colspan="4" class="text-center py-4">{% trans "Aucune donnée de production trouvée." %}</td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            {% if production_records.has_other_pages %}
-            <div class="card-footer bg-light d-flex justify-content-center">
-                <ul class="pagination pagination-sm mb-0">
-                    {% if production_records.has_previous %}
-                    <li class="page-item"><a class="page-link" href="?page={{ production_records.previous_page_number }}">&laquo;</a></li>
-                    {% else %}
-                    <li class="page-item disabled"><span class="page-link">&laquo;</span></li>
-                    {% endif %}
-                    
-                    {% for i in production_records.paginator.page_range %}
-                        {% if production_records.number == i %}
-                        <li class="page-item active"><span class="page-link">{{ i }}</span></li>
-                        {% else %}
-                        <li class="page-item"><a class="page-link" href="?page={{ i }}">{{ i }}</a></li>
-                        {% endif %}
-                    {% endfor %}
-                    
-                    {% if production_records.has_next %}
-                    <li class="page-item"><a class="page-link" href="?page={{ production_records.next_page_number }}">&raquo;</a></li>
-                    {% else %}
-                    <li class="page-item disabled"><span class="page-link">&raquo;</span></li>
-                    {% endif %}
-                </ul>
-            </div>
-            {% endif %}
-        </div>
+ 
+    {# Savings accounts #}
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <span class="fw-semibold">{% trans "Savings Accounts" %}</span>
+        {% if request.user.role in "system_admin,sacco_manager" or request.user.is_superuser %}
+        <a href="{% url 'cooperatives:savings_create' %}?member={{ member.pk }}" class="btn btn-sm btn-outline-primary">
+          <i class="bi bi-plus me-1"></i>{% trans "New Account" %}
+        </a>
+        {% endif %}
+      </div>
+      <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>{% trans "Account #" %}</th>
+              <th>{% trans "Type" %}</th>
+              <th class="text-end">{% trans "Balance (SZL)" %}</th>
+              <th>{% trans "Rate" %}</th>
+              <th>{% trans "Status" %}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for acc in savings %}
+            <tr>
+              <td class="font-monospace small">{{ acc.account_number }}</td>
+              <td>{{ acc.get_account_type_display }}</td>
+              <td class="text-end fw-semibold">{{ acc.balance|floatformat:2 }}</td>
+              <td>{{ acc.interest_rate|floatformat:2 }}%</td>
+              <td>
+                {% if acc.is_active %}<span class="badge bg-success">{% trans "Active" %}</span>
+                {% else %}<span class="badge bg-secondary">{% trans "Closed" %}</span>{% endif %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" class="text-center text-muted py-3">{% trans "No savings accounts." %}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
     </div>
+  </div>
 </div>
 {% endblock %}

@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+{% load i18n custom_tags %}
+{% block title %}{% trans "KPI Dashboard" %} – {{ cooperative.name }}{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'cooperatives:cooperative_list' %}">{% trans "Cooperatives" %}</a></li>
+<li class="breadcrumb-item"><a href="{% url 'cooperatives:cooperative_detail' cooperative.pk %}">{{ cooperative.name }}</a></li>
+<li class="breadcrumb-item active">{% trans "KPI Dashboard" %}</li>
+{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
+  <div>
+    <h4 class="fw-bold mb-0">{{ cooperative.name }}</h4>
+    <span class="text-muted small">
+      {% trans "Region:" %} {{ cooperative.region.name }}
+      {% if par_rank %} · {% trans "PAR Rank in Region:" %} <strong>{{ par_rank }} / {{ peer_count }}</strong> {% trans "(1 = best)" %}{% endif %}
+    </span>
+  </div>
+  <a href="{% url 'analytics:report_list' %}" class="btn btn-outline-primary btn-sm">
+    <i class="bi bi-file-earmark-arrow-down me-1"></i>{% trans "Export Report" %}
+  </a>
+</div>
+ 
+{% if latest %}
+{# ── Scorecard Cards ──────────────────────────────────────────────────────── #}
+<div class="row g-3 mb-4">
+  {% for kpi in kpis %}
+  {% with val=latest|getattr:kpi.source_field %}
+  <div class="col-6 col-md-3 col-xl-2">
+    {% with bench=benchmarks|get:kpi.pk %}
+    <div class="card kpi-card h-100 p-3 {% if val != None %}
+      {% if kpi.higher_is_better %}{% if val >= 0.1 %}green{% elif val >= 0.05 %}amber{% else %}red{% endif %}
+      {% else %}{% if val <= 0.05 %}green{% elif val <= 0.1 %}amber{% else %}red{% endif %}{% endif %}
+      {% else %}neutral{% endif %}">
+      <div class="text-muted" style="font-size:.7rem;line-height:1.3">{{ kpi.name }}</div>
+      <div class="fw-bold mt-1" style="font-size:1.5rem;line-height:1.1">
+        {% if val != None %}
+          {% if kpi.unit == "%" %}{{ val|floatformat:1 }}%
+          {% elif kpi.unit == "SZL" %}{{ val|floatformat:0 }}
+          {% elif kpi.unit == "hours" %}{{ val|floatformat:1 }}h
+          {% else %}{{ val|floatformat:2 }}{% endif %}
+        {% else %}–{% endif %}
+      </div>
+      {% if bench and val != None %}
+      <div class="small text-muted mt-1">{% trans "Target:" %}
+        {% if kpi.higher_is_better %}≥ {{ bench.green_min }}{% else %}≤ {{ bench.amber_max }}{% endif %}
+        {{ kpi.unit }}
+      </div>
+      {% endif %}
+    </div>
+    {% endwith %}
+  </div>
+  {% endwith %}
+  {% endfor %}
+</div>
+ 
+{# ── Trend Charts ─────────────────────────────────────────────────────────── #}
+<div class="row g-4 mb-4">
+  <div class="col-md-8">
+    <div class="card border-0 shadow-sm p-3">
+      <h6 class="fw-semibold mb-3">{% trans "KPI Trend" %}</h6>
+      <canvas id="trendChart" height="90"></canvas>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm p-3">
+      <h6 class="fw-semibold mb-3">{% trans "Portfolio Quality" %}</h6>
+      <canvas id="portfolioChart" height="180"></canvas>
+      <div class="mt-2 text-center small text-muted">
+        {% trans "Gross Loan Portfolio: SZL" %} {{ latest.gross_loan_portfolio|floatformat:0 }}
+      </div>
+    </div>
+  </div>
+</div>
+ 
+{# ── Period History Table ─────────────────────────────────────────────────── #}
+<div class="card border-0 shadow-sm">
+  <div class="card-header bg-white d-flex justify-content-between">
+    <span class="fw-semibold">{% trans "Historical Periods" %}</span>
+    <a href="{% url 'cooperatives:financial_summary_create' cooperative.pk %}" class="btn btn-sm btn-primary">
+      <i class="bi bi-plus me-1"></i>{% trans "Submit New Period" %}
+    </a>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-sm table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>{% trans "Period" %}</th>
+          <th class="text-end">{% trans "Members" %}</th>
+          <th class="text-end">{% trans "Gross LP (SZL)" %}</th>
+          <th class="text-end">{% trans "PAR30 %" %}</th>
+          <th class="text-end">{% trans "Liquidity %" %}</th>
+          <th class="text-end">{% trans "Capital %" %}</th>
+          <th class="text-end">{% trans "ROA %" %}</th>
+          <th class="text-end">{% trans "OSS %" %}</th>
+          <th>{% trans "Verified" %}</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in summaries %}
+        <tr>
+          <td>{{ s.period_start }} – {{ s.period_end }}</td>
+          <td class="text-end">{{ s.total_members }}</td>
+          <td class="text-end">{{ s.gross_loan_portfolio|floatformat:0 }}</td>
+          <td class="text-end {% if s.kpi_delinquency_rate and s.kpi_delinquency_rate > 0.1 %}text-danger fw-semibold{% endif %}">
+            {% if s.kpi_delinquency_rate %}{{ s.kpi_delinquency_rate|floatformat:1 }}%{% else %}–{% endif %}
+          </td>
+          <td class="text-end">{% if s.kpi_liquidity_ratio %}{{ s.kpi_liquidity_ratio|floatformat:1 }}%{% else %}–{% endif %}</td>
+          <td class="text-end">{% if s.kpi_capital_adequacy %}{{ s.kpi_capital_adequacy|floatformat:1 }}%{% else %}–{% endif %}</td>
+          <td class="text-end">{% if s.kpi_roa %}{{ s.kpi_roa|floatformat:1 }}%{% else %}–{% endif %}</td>
+          <td class="text-end">{% if s.kpi_operational_self_sufficiency %}{{ s.kpi_operational_self_sufficiency|floatformat:0 }}%{% else %}–{% endif %}</td>
+          <td>{% if s.is_verified %}<i class="bi bi-patch-check-fill text-success"></i>{% else %}<i class="bi bi-clock text-muted"></i>{% endif %}</td>
+          <td><a href="{% url 'cooperatives:financial_summary_detail' s.pk %}" class="btn btn-sm btn-outline-secondary py-0"><i class="bi bi-eye"></i></a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+ 
+{% else %}
+<div class="text-center py-5 text-muted">
+  <i class="bi bi-journal-x display-4 d-block mb-3 opacity-25"></i>
+  <p>{% trans "No verified financial reports for this cooperative yet." %}</p>
+  <a href="{% url 'cooperatives:financial_summary_create' cooperative.pk %}" class="btn btn-primary">
+    <i class="bi bi-plus me-1"></i>{% trans "Submit First Report" %}
+  </a>
+</div>
+{% endif %}
+{% endblock %}
+ 
+{% block extra_scripts %}
+<script>
+const d = {{ trend_json|safe }};
+new Chart(document.getElementById('trendChart'), {
+  type: 'line',
+  data: {
+    labels: d.labels,
+    datasets: [
+      { label: '{% trans "PAR30 %" %}', data: d.par30, borderColor: '#E74C3C', tension: .4, fill: false, pointRadius: 4 },
+      { label: '{% trans "Liquidity %" %}', data: d.liquidity, borderColor: '#27AE60', tension: .4, fill: false, pointRadius: 4 },
+      { label: '{% trans "Capital %" %}', data: d.capital, borderColor: '#2E86C1', tension: .4, fill: false, pointRadius: 4 },
+    ]
+  },
+  options: {
+    plugins: { legend: { position: 'bottom' } },
+    scales: { y: { beginAtZero: true, ticks: { callback: v => v + '%' } } }
+  }
+});
+ 
+// Portfolio quality from REST endpoint
+(async () => {
+  const r = await fetch("{% url 'analytics:chart_loan_portfolio' %}");
+  const pd = await r.json();
+  new Chart(document.getElementById('portfolioChart'), {
+    type: 'doughnut',
+    data: { labels: pd.labels, datasets: [{ data: pd.values, backgroundColor: ['#27AE60','#F39C12','#E74C3C'] }] },
+    options: { plugins: { legend: { position: 'bottom' } } }
+  });
+})();
+</script>
+{% endblock %}
+ 

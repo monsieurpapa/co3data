@@ -1,5 +1,5 @@
 from django.db.models import Avg, Sum, Count
-from cooperatives.models import ProductionRecord, Member, Farm
+from cooperatives.models import Member
 from .models import KPI, DataValidationRule, DataQualityAlert
 from simpleeval import simple_eval
 
@@ -17,14 +17,14 @@ class KPIService:
 
     @staticmethod
     def get_cooperatives_with_yield_data(queryset):
-        """Returns cooperative queryset annotated with total yield and total farm size."""
-        # This requires careful aggregation to avoid cartesian products if members have multiple farms/records
-        # For a clean dashboard summary, it is often better to calculate global averages or annotate carefully.
-        # Here we annotate total production and total farm size linked to the cooperative.
-        from django.db.models import Sum
+        """
+        [STUBBED] Legacy yield data calculation.
+        Original logic relied on ProductionRecord and Farm models which are removed.
+        """
+        from django.db.models import Value
         return queryset.annotate(
-            total_production_kg=Sum('members__farms__production_records__quantity_kg', distinct=True),
-            total_farm_size_ha=Sum('members__farms__size_hectares', distinct=True)
+            total_production_kg=Value(0.0),
+            total_farm_size_ha=Value(0.0)
         )
 
 class ValidationService:
@@ -38,9 +38,7 @@ class ValidationService:
         
         # Determine the cooperative association
         cooperative = getattr(record, 'cooperative', None)
-        if not cooperative and hasattr(record, 'farm'):
-            cooperative = record.farm.member.cooperative
-        elif not cooperative and record._meta.model_name == 'cooperative':
+        if not cooperative and record._meta.model_name == 'cooperative':
             cooperative = record
 
         for rule in rules:

@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% load i18n custom_tags %}
+{% block title %}{% trans "Submit Financial Report" %} – CoopData{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'cooperatives:cooperative_list' %}">{% trans "Cooperatives" %}</a></li>
+<li class="breadcrumb-item active">{% trans "Financial Report" %}</li>
+{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-xl-10">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white">
+        <h5 class="mb-0 fw-bold">{% trans "Submit Financial Report" %}</h5>
+        <p class="text-muted small mb-0">{% trans "All monetary values in Eswatini Lilangeni (SZL). KPIs are computed automatically after submission." %}</p>
+      </div>
+      <div class="card-body">
+        <form method="post" novalidate id="financialForm">
+          {% csrf_token %}
+ 
+          {# Non-field errors #}
+          {% if form.non_field_errors %}
+          <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+          {% endif %}
+ 
+          {# ── Period ──────────────────────────────────────────────────── #}
+          <h6 class="text-uppercase small fw-semibold text-muted border-bottom pb-2 mb-3">{% trans "Reporting Period" %}</h6>
+          <div class="row g-3 mb-4">
+            <div class="col-md-4">
+              <label class="form-label small fw-semibold">{% trans "Cooperative" %} <span class="text-danger">*</span></label>
+              {{ form.cooperative }}
+            </div>
+            <div class="col-md-2">
+              <label class="form-label small fw-semibold">{% trans "Period Type" %}</label>
+              {{ form.period_type }}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label small fw-semibold">{% trans "Period Start" %} <span class="text-danger">*</span></label>
+              {{ form.period_start }}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label small fw-semibold">{% trans "Period End" %} <span class="text-danger">*</span></label>
+              {{ form.period_end }}
+            </div>
+          </div>
+ 
+          {# ── Balance Sheet ────────────────────────────────────────────── #}
+          <h6 class="text-uppercase small fw-semibold text-muted border-bottom pb-2 mb-3">{% trans "Balance Sheet" %}</h6>
+          <div class="row g-3 mb-4">
+            {% for fname in "total_assets,total_liabilities,total_equity,share_capital,retained_earnings,total_savings,total_deposits"|split:"," %}
+            <div class="col-md-3">
+              <label class="form-label small fw-semibold">{{ form|getitem:fname|label }}</label>
+              {{ form|getitem:fname }}
+              {% if form|getitem:fname|errors %}<div class="invalid-feedback d-block">{{ form|getitem:fname|errors|first }}</div>{% endif %}
+            </div>
+            {% endfor %}
+          </div>
+ 
+          {# ── Loan Portfolio ───────────────────────────────────────────── #}
+          <h6 class="text-uppercase small fw-semibold text-muted border-bottom pb-2 mb-3">{% trans "Loan Portfolio" %}</h6>
+          <div class="row g-3 mb-4">
+            <div class="col-md-3">
+              <label class="form-label small fw-semibold">{% trans "Gross Loan Portfolio" %}</label>
+              {{ form.gross_loan_portfolio }}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label small fw-semibold">{% trans "Loans Disbursed (Period)" %}</label>
+              {{ form.loans_disbursed_period }}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label small fw-semibold">{% trans "Repayments Received" %}</label>
+              {{ form.loan_repayments_received }}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label small fw-semibold">{% trans "PAR 30 Days" %} <i class="bi bi-info-circle" title="{% trans 'Outstanding balance of loans overdue > 30 days' %}"></i></label>
+              {{ form.par_30_days }}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label small fw-semibold">{% trans "PAR 90 Days" %}</label>
+              {{ form.par_90_days }}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label small fw-semibold">{% trans "Write-offs (Period)" %}</label>
+              {{ form.write_offs_period }}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label small fw-semibold">{% trans "Loan Loss Provisions" %}</label>
+              {{ form.loan_loss_provisions }}
+            </div>
+          </div>
+ 
+          {# ── Income Statement ─────────────────────────────────────────── #}
+          <h6 class="text-uppercase small fw-semibold text-muted border-bottom pb-2 mb-3">{% trans "Income Statement" %}</h6>
+          <div class="row g-3 mb-4">
+            <div class="col-md-3">
+              <label class="form-label small fw-semibold">{% trans "Interest Income" %}</label>
+              {{ form.interest_income }}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label small fw-semibold">{% trans "Fee Income" %}</label>
+              {{ form.fee_income }}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label small fw-semibold">{% trans "Other Income" %}</label>
+              {{ form.other_income }}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label small fw-semibold">{% trans "Total Income" %}</label>
+              {{ form.total_income }}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label small fw-semibold">{% trans "Operating Expenses" %}</label>
+              {{ form.operating_expenses }}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label small fw-semibold">{% trans "Interest Expense" %}</label>
+              {{ form.interest_expense }}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label small fw-semibold">{% trans "Net Surplus / (Deficit)" %}</label>
+              {{ form.net_surplus }}
+            </div>
+          </div>
+ 
+          {# ── Membership ───────────────────────────────────────────────── #}
+          <h6 class="text-uppercase small fw-semibold text-muted border-bottom pb-2 mb-3">
+            {% trans "Membership Snapshot" %}
+            <span class="badge bg-warning text-dark fw-normal ms-1" style="font-size:.65rem">{% trans "Mandatory for TOR compliance" %}</span>
+          </h6>
+          <div class="row g-3 mb-4">
+            <div class="col-md-2"><label class="form-label small fw-semibold">{% trans "Total Members" %}</label>{{ form.total_members }}</div>
+            <div class="col-md-2"><label class="form-label small fw-semibold">{% trans "Active Borrowers" %}</label>{{ form.active_borrowers }}</div>
+            <div class="col-md-2"><label class="form-label small fw-semibold">{% trans "Active Savers" %}</label>{{ form.active_savers }}</div>
+            <div class="col-md-2"><label class="form-label small fw-semibold">{% trans "New Members" %}</label>{{ form.new_members_period }}</div>
+            <div class="col-md-2"><label class="form-label small fw-semibold">{% trans "Female Members" %}</label>{{ form.female_members }}</div>
+            <div class="col-md-2"><label class="form-label small fw-semibold">{% trans "Youth Members" %}</label>{{ form.youth_members }}</div>
+          </div>
+ 
+          {# ── Notes ────────────────────────────────────────────────────── #}
+          <div class="mb-4">
+            <label class="form-label small fw-semibold">{% trans "Notes" %}</label>
+            {{ form.notes }}
+          </div>
+ 
+          <div class="alert alert-info d-flex gap-2 align-items-start">
+            <i class="bi bi-info-circle-fill mt-1"></i>
+            <span>{% trans "KPIs (Delinquency Rate, Liquidity, Capital Adequacy, ROA, etc.) will be computed automatically after submission and can be viewed on the report detail page." %}</span>
+          </div>
+ 
+          <div class="d-flex justify-content-end gap-2">
+            <a href="javascript:history.back()" class="btn btn-outline-secondary">{% trans "Cancel" %}</a>
+            <button type="submit" class="btn btn-primary">
+              <i class="bi bi-send me-1"></i>{% trans "Submit Financial Report" %}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Verify Financial Summary" %} – CoopData{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'analytics:dashboard' %}">{% trans "Home" %}</a></li>
+<li class="breadcrumb-item"><a href="{% url 'cooperatives:cooperative_list' %}">{% trans "Cooperatives" %}</a></li>
+<li class="breadcrumb-item active">{% trans "Verify Summary" %}</li>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-6">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white fw-bold">
+        {% trans "Verify Financial Summary" %} #{{ object.pk }}
+      </div>
+      <div class="card-body py-4">
+        <p class="mb-4">
+          {% blocktrans with coop=object.cooperative.name start=object.period_start|date:"M Y" end=object.period_end|date:"M Y" %}
+          You are about to verify the financial data submitted by <strong>{{ coop }}</strong> for the period 
+          <strong>{{ start }}</strong> to <strong>{{ end }}</strong>.
+          {% endblocktrans %}
+        </p>
+        
+        <div class="alert alert-warning mb-4 small">
+          <i class="bi bi-exclamation-triangle-fill me-2"></i>
+          {% trans "This action records you as the verifier and marks the data as 'Official' for reporting purposes. Please ensure you have reviewed the details before proceeding." %}
+        </div>
+
+        <form method="post">
+          {% csrf_token %}
+          <div class="d-flex justify-content-end gap-2">
+            <a href="{% url 'cooperatives:financial_summary_detail' object.pk %}" class="btn btn-outline-secondary">{% trans "Back to Details" %}</a>
+            <button type="submit" class="btn btn-warning">
+              <i class="bi bi-shield-check me-1"></i>{% trans "Confirm Verification" %}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

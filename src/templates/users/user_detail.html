@@ -20,13 +20,8 @@
                     </h5>
                     <div>
                         {% if user.is_staff or user.is_superuser %}
-                        <a href="{% url 'users:user_edit' object.unique_id %}" class="btn btn-falcon-primary btn-sm">
+                        <a href="{% url 'users:user_update' object.pk %}" class="btn btn-falcon-primary btn-sm">
                             <span class="fas fa-edit me-1"></span>{% trans "Modifier" %}
-                        </a>
-                        {% endif %}
-                        {% if user.is_superuser and object.pk != user.pk %}
-                        <a href="{% url 'users:user_delete' object.unique_id %}" class="btn btn-danger btn-sm">
-                            <span class="fas fa-trash me-1"></span>{% trans "Supprimer" %}
                         </a>
                         {% endif %}
                     </div>
@@ -175,7 +170,7 @@
                         <span class="fas fa-lock-open me-1"></span>{% trans "Admin Django" %}
                     </a>
                     {% if user.is_staff or user.is_superuser %}
-                    <a href="{% url 'users:user_edit' object.unique_id %}" class="btn btn-outline-primary btn-sm">
+                    <a href="{% url 'users:user_update' object.pk %}" class="btn btn-outline-primary btn-sm">
                         <span class="fas fa-edit me-1"></span>{% trans "Modifier" %}
                     </a>
                     {% endif %}

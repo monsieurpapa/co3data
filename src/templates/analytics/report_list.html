@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Reports" %} – CoopData{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'analytics:dashboard' %}">{% trans "Home" %}</a></li>
+<li class="breadcrumb-item active">{% trans "Reports" %}</li>
+{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="fw-bold mb-0">{% trans "Report Templates" %}</h4>
+  <a href="{% url 'analytics:export_job_list' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-clock-history me-1"></i>{% trans "My Export History" %}
+  </a>
+</div>
+<div class="row g-3">
+  {% for report in reports %}
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <h6 class="fw-semibold">{{ report.name }}</h6>
+        <p class="text-muted small mb-3">{{ report.description|default:"" }}</p>
+        <div class="d-flex gap-1 flex-wrap mb-3">
+          <span class="badge bg-light text-dark">PDF</span>
+          <span class="badge bg-light text-dark">XLSX</span>
+          <span class="badge bg-light text-dark">DOCX</span>
+          <span class="badge bg-light text-dark">CSV</span>
+        </div>
+      </div>
+      <div class="card-footer bg-white border-0">
+        <a href="{% url 'analytics:report_run' report.pk %}" class="btn btn-primary btn-sm w-100">
+          <i class="bi bi-play-fill me-1"></i>{% trans "Generate Report" %}
+        </a>
+      </div>
+    </div>
+  </div>
+  {% empty %}
+  <div class="col-12 text-center text-muted py-5">
+    <i class="bi bi-file-earmark-x display-4 d-block mb-2 opacity-25"></i>
+    {% trans "No reports configured yet." %}
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

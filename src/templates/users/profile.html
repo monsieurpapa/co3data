@@ -1,73 +1,94 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 {% load i18n %}
-
-{% block title %}{% trans "Mon Profil" %} | CO3DATA{% endblock %}
-
+{% block title %}{% trans "My Profile" %} – CoopData{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item active">{% trans "Profile" %}</li>
+{% endblock %}
 {% block content %}
-<div class="row g-3">
-    <div class="col-lg-12">
-        <div class="card mb-3">
-            <div class="card-header bg-light">
-                <h5 class="mb-0">{% trans "Paramètres du Profil" %}</h5>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-3 text-center mb-3">
-                        <div class="avatar avatar-5xl mb-3">
-                            {% if user.profile_picture %}
-                                <img class="rounded-circle" src="{{ user.profile_picture.url }}" alt="" />
-                            {% else %}
-                                <div class="avatar-name rounded-circle"><span>{{ user.username|first|upper }}</span></div>
-                            {% endif %}
-                        </div>
-                    </div>
-                    <div class="col-md-9">
-                        <form method="post" enctype="multipart/form-data">
-                            {% csrf_token %}
-                            <div class="row g-3">
-                                <div class="col-sm-6">
-                                    <label class="form-label">{% trans "Nom d'utilisateur" %}</label>
-                                    <input class="form-control" type="text" value="{{ user.username }}" disabled />
-                                </div>
-                                <div class="col-sm-6">
-                                    {{ form.email.label_tag }}
-                                    {{ form.email }}
-                                    {{ form.email.errors }}
-                                </div>
-                                <div class="col-sm-6">
-                                    {{ form.first_name.label_tag }}
-                                    {{ form.first_name }}
-                                    {{ form.first_name.errors }}
-                                </div>
-                                <div class="col-sm-6">
-                                    {{ form.last_name.label_tag }}
-                                    {{ form.last_name }}
-                                    {{ form.last_name.errors }}
-                                </div>
-                                <div class="col-sm-6">
-                                    {{ form.phone_number.label_tag }}
-                                    {{ form.phone_number }}
-                                    {{ form.phone_number.errors }}
-                                </div>
-                                <div class="col-sm-6">
-                                    {{ form.preferred_language.label_tag }}
-                                    {{ form.preferred_language }}
-                                    {{ form.preferred_language.errors }}
-                                </div>
-                                <div class="col-12">
-                                    {{ form.profile_picture.label_tag }}
-                                    {{ form.profile_picture }}
-                                    {{ form.profile_picture.errors }}
-                                </div>
-                                <div class="col-12 mt-3">
-                                    <button class="btn btn-falcon-primary" type="submit">{% trans "Enregistrer les modifications" %}</button>
-                                </div>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </div>
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+ 
+    {# 2FA status banner #}
+    {% if requires_2fa and not is_2fa_enrolled %}
+    <div class="alert alert-warning d-flex gap-2 align-items-center mb-4">
+      <i class="bi bi-shield-exclamation fs-5"></i>
+      <div>
+        <strong>{% trans "Two-Factor Authentication Required" %}</strong><br>
+        <span class="small">{% trans "Your role requires 2FA. Please set it up now to avoid being locked out." %}</span>
+      </div>
+      <a href="/account/two-factor/setup/" class="btn btn-warning btn-sm ms-auto">{% trans "Set Up 2FA" %}</a>
     </div>
+    {% elif requires_2fa and is_2fa_enrolled %}
+    <div class="alert alert-success d-flex gap-2 align-items-center mb-4">
+      <i class="bi bi-shield-check fs-5"></i>
+      <span>{% trans "Two-Factor Authentication is active on your account." %}</span>
+      <a href="/account/two-factor/" class="btn btn-outline-success btn-sm ms-auto">{% trans "Manage 2FA" %}</a>
+    </div>
+    {% endif %}
+ 
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <span class="fw-semibold">{% trans "My Profile" %}</span>
+        <a href="{% url 'users:profile_update' %}" class="btn btn-sm btn-outline-secondary">
+          <i class="bi bi-pencil me-1"></i>{% trans "Edit" %}
+        </a>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <div class="text-muted small">{% trans "Full Name" %}</div>
+            <div class="fw-semibold">{{ request.user.get_full_name|default:"–" }}</div>
+          </div>
+          <div class="col-md-6">
+            <div class="text-muted small">{% trans "Username" %}</div>
+            <div class="font-monospace">{{ request.user.username }}</div>
+          </div>
+          <div class="col-md-6">
+            <div class="text-muted small">{% trans "Email" %}</div>
+            <div>{{ request.user.email|default:"–" }}</div>
+          </div>
+          <div class="col-md-6">
+            <div class="text-muted small">{% trans "Phone" %}</div>
+            <div>{{ request.user.phone_number|default:"–" }}</div>
+          </div>
+          <div class="col-md-6">
+            <div class="text-muted small">{% trans "Role" %}</div>
+            <div><span class="badge bg-primary">{{ request.user.get_role_display }}</span></div>
+          </div>
+          <div class="col-md-6">
+            <div class="text-muted small">{% trans "Region" %}</div>
+            <div>{{ request.user.region.name|default:"–" }}</div>
+          </div>
+          <div class="col-md-6">
+            <div class="text-muted small">{% trans "Preferred Language" %}</div>
+            <div>{{ request.user.get_preferred_language_display }}</div>
+          </div>
+          <div class="col-md-6">
+            <div class="text-muted small">{% trans "Inclusion Flags" %}</div>
+            <div>
+              {% if request.user.is_youth %}<span class="badge bg-info me-1">{% trans "Youth" %}</span>{% endif %}
+              {% if request.user.is_marginalized %}<span class="badge bg-secondary">{% trans "Marginalized" %}</span>{% endif %}
+              {% if not request.user.is_youth and not request.user.is_marginalized %}<span class="text-muted small">–</span>{% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+ 
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white fw-semibold">{% trans "Quick Links" %}</div>
+      <div class="list-group list-group-flush">
+        <a href="/accounts/password/change/" class="list-group-item list-group-item-action d-flex align-items-center gap-2">
+          <i class="bi bi-key text-muted"></i> {% trans "Change Password" %}
+        </a>
+        {% if requires_2fa %}
+        <a href="/account/two-factor/" class="list-group-item list-group-item-action d-flex align-items-center gap-2">
+          <i class="bi bi-shield text-muted"></i> {% trans "Manage Two-Factor Authentication" %}
+        </a>
+        {% endif %}
+      </div>
+    </div>
+ 
+  </div>
 </div>
 {% endblock %}

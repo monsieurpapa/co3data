@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Financial Report" %} – {{ summary.cooperative.name }}{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'cooperatives:cooperative_list' %}">{% trans "Cooperatives" %}</a></li>
+<li class="breadcrumb-item"><a href="{% url 'cooperatives:cooperative_detail' summary.cooperative.pk %}">{{ summary.cooperative.name }}</a></li>
+<li class="breadcrumb-item active">{% trans "Financial Report" %}</li>
+{% endblock %}
+{% block content %}
+ 
+{# Header #}
+<div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
+  <div>
+    <h4 class="fw-bold mb-1">{{ summary.cooperative.name }}</h4>
+    <span class="text-muted">{{ summary.get_period_type_display }} · {{ summary.period_start }} – {{ summary.period_end }}</span>
+    {% if summary.is_verified %}
+    <span class="badge bg-success ms-2"><i class="bi bi-patch-check me-1"></i>{% trans "Verified" %}</span>
+    {% else %}
+    <span class="badge bg-warning text-dark ms-2">{% trans "Pending Verification" %}</span>
+    {% endif %}
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    {# Export buttons — TOR §3.4 #}
+    <div class="dropdown">
+      <button class="btn btn-outline-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown">
+        <i class="bi bi-download me-1"></i>{% trans "Export" %}
+      </button>
+      <ul class="dropdown-menu dropdown-menu-end">
+        <li>
+          <form method="post" action="{% url 'analytics:report_run' 1 %}">{% csrf_token %}
+            <input type="hidden" name="format" value="pdf">
+            <button class="dropdown-item" type="submit"><i class="bi bi-filetype-pdf me-2"></i>PDF</button>
+          </form>
+        </li>
+        <li>
+          <form method="post" action="{% url 'analytics:report_run' 1 %}">{% csrf_token %}
+            <input type="hidden" name="format" value="xlsx">
+            <button class="dropdown-item" type="submit"><i class="bi bi-filetype-xlsx me-2"></i>Excel</button>
+          </form>
+        </li>
+        <li>
+          <form method="post" action="{% url 'analytics:report_run' 1 %}">{% csrf_token %}
+            <input type="hidden" name="format" value="docx">
+            <button class="dropdown-item" type="submit"><i class="bi bi-filetype-docx me-2"></i>Word</button>
+          </form>
+        </li>
+      </ul>
+    </div>
+    {% if not summary.is_verified and request.user.role in "system_admin,government,apex_body,regional_officer" %}
+    <form method="post" action="{% url 'cooperatives:financial_summary_verify' summary.pk %}">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-success btn-sm">
+        <i class="bi bi-patch-check me-1"></i>{% trans "Verify Report" %}
+      </button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+ 
+{# KPI Cards — traffic light colours #}
+<div class="row g-3 mb-4">
+  {% for card in kpi_cards %}
+  <div class="col-6 col-md-3">
+    {% with val=card.value %}
+    <div class="card kpi-card h-100 p-3
+      {% if val == None %}neutral
+      {% elif card.higher_is_better %}
+        {% if card.format == 'percent' %}
+          {% if val >= 0.1 %}green{% elif val >= 0.05 %}amber{% else %}red{% endif %}
+        {% else %}neutral{% endif %}
+      {% else %}
+        {% if card.format == 'percent' %}
+          {% if val <= 0.05 %}green{% elif val <= 0.1 %}amber{% else %}red{% endif %}
+        {% else %}neutral{% endif %}
+      {% endif %}">
+      <div class="text-muted small mb-1">{{ card.label }}</div>
+      <div class="kpi-value">
+        {% if val != None %}
+          {% if card.format == "percent" %}{{ val|floatformat:1 }}%
+          {% elif card.format == "currency" %}SZL {{ val|floatformat:0 }}
+          {% else %}{{ val }}{% endif %}
+        {% else %}–{% endif %}
+      </div>
+      {% if val != None and card.format == "percent" %}
+      <div class="progress mt-2" style="height:4px">
+        <div class="progress-bar
+          {% if card.higher_is_better %}{% if val >= 0.1 %}bg-success{% elif val >= 0.05 %}bg-warning{% else %}bg-danger{% endif %}
+          {% else %}{% if val <= 0.05 %}bg-success{% elif val <= 0.1 %}bg-warning{% else %}bg-danger{% endif %}{% endif %}"
+          style="width:{% widthratio val 0.3 100 %}%"></div>
+      </div>
+      {% endif %}
+    </div>
+    {% endwith %}
+  </div>
+  {% endfor %}
+</div>
+ 
+{# Two-column: Balance Sheet | Income Statement #}
+<div class="row g-4 mb-4">
+  <div class="col-md-6">
+    <div class="card border-0 shadow-sm p-3">
+      <h6 class="fw-semibold mb-3 border-bottom pb-2">{% trans "Balance Sheet" %}</h6>
+      <table class="table table-sm table-borderless mb-0">
+        <tbody>
+          <tr><td class="text-muted">{% trans "Total Assets" %}</td><td class="text-end fw-semibold">SZL {{ summary.total_assets|floatformat:2 }}</td></tr>
+          <tr><td class="text-muted">{% trans "Total Liabilities" %}</td><td class="text-end">SZL {{ summary.total_liabilities|floatformat:2 }}</td></tr>
+          <tr><td class="text-muted">{% trans "Total Equity" %}</td><td class="text-end">SZL {{ summary.total_equity|floatformat:2 }}</td></tr>
+          <tr><td class="text-muted">{% trans "Share Capital" %}</td><td class="text-end">SZL {{ summary.share_capital|floatformat:2 }}</td></tr>
+          <tr class="table-light"><td class="text-muted">{% trans "Total Savings" %}</td><td class="text-end">SZL {{ summary.total_savings|floatformat:2 }}</td></tr>
+          <tr><td class="text-muted">{% trans "Total Deposits" %}</td><td class="text-end">SZL {{ summary.total_deposits|floatformat:2 }}</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card border-0 shadow-sm p-3">
+      <h6 class="fw-semibold mb-3 border-bottom pb-2">{% trans "Income Statement" %}</h6>
+      <table class="table table-sm table-borderless mb-0">
+        <tbody>
+          <tr><td class="text-muted">{% trans "Interest Income" %}</td><td class="text-end">SZL {{ summary.interest_income|floatformat:2 }}</td></tr>
+          <tr><td class="text-muted">{% trans "Fee Income" %}</td><td class="text-end">SZL {{ summary.fee_income|floatformat:2 }}</td></tr>
+          <tr><td class="text-muted">{% trans "Total Income" %}</td><td class="text-end fw-semibold">SZL {{ summary.total_income|floatformat:2 }}</td></tr>
+          <tr class="table-light"><td class="text-muted">{% trans "Operating Expenses" %}</td><td class="text-end">SZL {{ summary.operating_expenses|floatformat:2 }}</td></tr>
+          <tr><td class="text-muted">{% trans "Interest Expense" %}</td><td class="text-end">SZL {{ summary.interest_expense|floatformat:2 }}</td></tr>
+          <tr><td class="text-muted fw-semibold">{% trans "Net Surplus" %}</td>
+            <td class="text-end fw-bold {% if summary.net_surplus >= 0 %}text-success{% else %}text-danger{% endif %}">
+              SZL {{ summary.net_surplus|floatformat:2 }}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+ 
+{# Loan Portfolio + Membership #}
+<div class="row g-4">
+  <div class="col-md-6">
+    <div class="card border-0 shadow-sm p-3">
+      <h6 class="fw-semibold mb-3 border-bottom pb-2">{% trans "Loan Portfolio" %}</h6>
+      <table class="table table-sm table-borderless mb-0">
+        <tr><td class="text-muted">{% trans "Gross Loan Portfolio" %}</td><td class="text-end fw-semibold">SZL {{ summary.gross_loan_portfolio|floatformat:2 }}</td></tr>
+        <tr><td class="text-muted">{% trans "Disbursed (Period)" %}</td><td class="text-end">SZL {{ summary.loans_disbursed_period|floatformat:2 }}</td></tr>
+        <tr class="table-light"><td class="text-muted">{% trans "PAR 30 Days" %}</td><td class="text-end text-danger">SZL {{ summary.par_30_days|floatformat:2 }}</td></tr>
+        <tr><td class="text-muted">{% trans "PAR 90 Days" %}</td><td class="text-end text-danger">SZL {{ summary.par_90_days|floatformat:2 }}</td></tr>
+        <tr><td class="text-muted">{% trans "Write-offs" %}</td><td class="text-end">SZL {{ summary.write_offs_period|floatformat:2 }}</td></tr>
+        <tr><td class="text-muted">{% trans "Loan Loss Provisions" %}</td><td class="text-end">SZL {{ summary.loan_loss_provisions|floatformat:2 }}</td></tr>
+      </table>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card border-0 shadow-sm p-3">
+      <h6 class="fw-semibold mb-3 border-bottom pb-2">{% trans "Membership Snapshot" %}</h6>
+      <table class="table table-sm table-borderless mb-0">
+        <tr><td class="text-muted">{% trans "Total Members" %}</td><td class="text-end fw-semibold">{{ summary.total_members }}</td></tr>
+        <tr><td class="text-muted">{% trans "Active Borrowers" %}</td><td class="text-end">{{ summary.active_borrowers }}</td></tr>
+        <tr><td class="text-muted">{% trans "Active Savers" %}</td><td class="text-end">{{ summary.active_savers }}</td></tr>
+        <tr><td class="text-muted">{% trans "New Members (Period)" %}</td><td class="text-end">{{ summary.new_members_period }}</td></tr>
+        <tr class="table-light">
+          <td class="text-muted">{% trans "Female Members" %}</td>
+          <td class="text-end">{{ summary.female_members }}
+            <small class="text-muted">({{ summary.kpi_female_participation_rate|floatformat:1 }}%)</small>
+          </td>
+        </tr>
+        <tr>
+          <td class="text-muted">{% trans "Youth Members" %}</td>
+          <td class="text-end">{{ summary.youth_members }}
+            <small class="text-muted">({{ summary.kpi_youth_participation_rate|floatformat:1 }}%)</small>
+          </td>
+        </tr>
+      </table>
+    </div>
+  </div>
+</div>
+ 
+{% if summary.notes %}
+<div class="card border-0 shadow-sm p-3 mt-4">
+  <h6 class="fw-semibold mb-2">{% trans "Notes" %}</h6>
+  <p class="mb-0 text-muted">{{ summary.notes }}</p>
+</div>
+{% endif %}
+ 
+{% endblock %}

@@ -7,8 +7,8 @@ class DeviceAdmin(admin.ModelAdmin):
 
 @admin.register(PendingChange)
 class PendingChangeAdmin(admin.ModelAdmin):
-    list_display = ('device', 'change_type', 'content_type', 'timestamp', 'is_synced')
-    list_filter = ('is_synced', 'change_type')
+    list_display = ('device', 'change_type', 'content_type', 'local_timestamp', 'state')
+    list_filter = ('state', 'change_type')
 
 @admin.register(SyncLog)
 class SyncLogAdmin(admin.ModelAdmin):

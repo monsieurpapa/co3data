@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Run Report" %} | CO3DATA{% endblock %}
+
+{% block breadcrumb %}
+    <li class="breadcrumb-item"><a href="{% url 'analytics:dashboard' %}">{% trans "Home" %}</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'analytics:report_list' %}">{% trans "Reports" %}</a></li>
+    <li class="breadcrumb-item active" aria-current="page">{{ report.name }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white fw-semi-bold">
+                {% trans "Run Report:" %} {{ report.name }}
+            </div>
+            <div class="card-body">
+                <p class="text-muted small mb-4">{{ report.description }}</p>
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label" for="format">{% trans "Select Output Format" %}</label>
+                        <select name="format" id="format" class="form-select">
+                            <option value="pdf" {% if report.default_format == 'pdf' %}selected{% endif %}>PDF (Adobe Reader)</option>
+                            <option value="xlsx" {% if report.default_format == 'xlsx' %}selected{% endif %}>Excel (.xlsx)</option>
+                            <option value="docx" {% if report.default_format == 'docx' %}selected{% endif %}>Word (.docx)</option>
+                            <option value="csv" {% if report.default_format == 'csv' %}selected{% endif %}>CSV (Plain Data)</option>
+                        </select>
+                    </div>
+                    
+                    {% if report.parameters %}
+                    <div class="bg-light p-3 rounded mb-3">
+                        <h6 class="small fw-bold border-bottom pb-2 mb-2">{% trans "Report Parameters" %}</h6>
+                        <ul class="list-unstyled mb-0 small">
+                            {% for key, value in report.parameters.items %}
+                            <li><strong>{{ key|title }}:</strong> {{ value }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+
+                    <div class="d-flex justify-content-end gap-2 mt-4">
+                        <a href="{% url 'analytics:report_list' %}" class="btn btn-outline-secondary">{% trans "Cancel" %}</a>
+                        <button type="submit" class="btn btn-primary">
+                            <span class="fas fa-play me-1"></span>{% trans "Queue Report" %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

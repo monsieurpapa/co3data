@@ -5,7 +5,7 @@ from django.contrib.contenttypes.models import ContentType
 from core.mixins import RoleRequiredMixin, RegionalAccessMixin
 from .models import Questionnaire, Submission, Answer
 from .forms import QuestionnaireSubmissionForm, QuestionFormSet
-from cooperatives.models import Cooperative, Member, FinancialRecord, ProductionRecord
+from cooperatives.models import Cooperative, Member
 from users.models import User
 
 class QuestionnaireListView(RoleRequiredMixin, ListView):
@@ -102,10 +102,11 @@ class QuestionnaireSubmissionView(RoleRequiredMixin, FormView):
                 return get_object_or_404(Member, unique_id=target_id)
             elif questionnaire.target_model == 'user':
                 return get_object_or_404(User, unique_id=target_id)
-            elif questionnaire.target_model == 'financial_record':
-                return get_object_or_404(FinancialRecord, unique_id=target_id)
-            elif questionnaire.target_model == 'production':
-                return get_object_or_404(ProductionRecord, unique_id=target_id)
+            # elif questionnaire.target_model == 'financial_record':
+            #     return get_object_or_404(FinancialRecord, unique_id=target_id)
+            # elif questionnaire.target_model == 'production':
+            #     return get_object_or_404(ProductionRecord, unique_id=target_id)
+            pass
         except:
             return None
         return None

@@ -1,239 +1,210 @@
-{% extends 'base.html' %}
+
+{% extends "base.html" %}
 {% load i18n %}
 
+{% block title %}{% trans "Dashboard" %} – CoopData{% endblock %}
+
 {% block breadcrumb %}
-    <li class="breadcrumb-item active" aria-current="page">{% trans "Accueil" %}</li>
+<li class="breadcrumb-item active">{% trans "Dashboard" %}</li>
 {% endblock %}
 
-{% block title %}{% trans "Tableau de Bord" %} | CO3DATA{% endblock %}
-
 {% block content %}
-<div class="row g-3 mb-3">
-    <div class="col-md-6 col-xxl-3">
-        <div class="card h-md-100">
-            <div class="card-header pb-0">
-                <h6 class="mb-0 mt-2">{% trans "Coopératives" %}</h6>
-            </div>
-            <div class="card-body d-flex flex-column justify-content-end">
-                <div class="row g-0">
-                    <div class="col">
-                        <p class="font-sans-serif lh-1 mb-1 fs-4">{{ total_cooperatives }}</p>
-                    </div>
-                    <div class="col-auto ps-0">
-                        <div class="fas fa-university fs-3 text-primary"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-6 col-xxl-3">
-        <div class="card h-md-100">
-            <div class="card-header pb-0">
-                <h6 class="mb-0 mt-2">{% trans "Membres" %}</h6>
-            </div>
-            <div class="card-body d-flex flex-column justify-content-end">
-                <div class="row g-0">
-                    <div class="col">
-                        <p class="font-sans-serif lh-1 mb-1 fs-4">{{ total_members }}</p>
-                    </div>
-                    <div class="col-auto ps-0">
-                        <div class="fas fa-users fs-3 text-info"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-6 col-xxl-3">
-        <div class="card h-md-100">
-            <div class="card-header pb-0">
-                <h6 class="mb-0 mt-2">{% trans "Rendement Moyen" %}</h6>
-            </div>
-            <div class="card-body d-flex flex-column justify-content-end">
-                <div class="row g-0">
-                    <div class="col">
-                        <p class="font-sans-serif lh-1 mb-1 fs-4">{{ avg_yield }} <small class="fs--1 text-500">kg/ha</small></p>
-                    </div>
-                    <div class="col-auto ps-0">
-                        <div class="fas fa-seedling fs-3 text-success"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-6 col-xxl-3">
-        <div class="card h-md-100">
-            <div class="card-header pb-0">
-                <h6 class="mb-0 mt-2">{% trans "Soumissions" %}</h6>
-            </div>
-            <div class="card-body d-flex flex-column justify-content-end">
-                <div class="row g-0">
-                    <div class="col">
-                        <p class="font-sans-serif lh-1 mb-1 fs-4">{{ total_submissions }}</p>
-                    </div>
-                    <div class="col-auto ps-0">
-                        <div class="fas fa-file-alt fs-3 text-warning"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h4 class="mb-0 fw-bold">{% trans "Dashboard" %}</h4>
+  <small class="text-muted">{% trans "Last updated:" %} {% now "Y-m-d H:i" %}</small>
 </div>
 
-{% if quality_alerts %}
-<div class="card mb-3 border-danger">
-    <div class="card-header bg-soft-danger">
-        <h5 class="mb-0 text-danger"><span class="fas fa-exclamation-triangle me-2"></span>{% trans "Alertes Qualité des Données" %}</h5>
+{# ── Headline KPI Cards ──────────────────────────────────────────────────── #}
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="card kpi-card neutral h-100 p-3">
+      <div class="text-muted small mb-1"><i class="bi bi-building me-1"></i>{% trans "Active Cooperatives" %}</div>
+      <div class="kpi-value text-primary">{{ total_cooperatives }}</div>
     </div>
-    <div class="card-body p-0">
-        <div class="list-group list-group-flush">
-            {% for alert in quality_alerts %}
-            <div class="list-group-item">
-                <div class="row align-items-center">
-                    <div class="col">
-                        <h6 class="mb-1">{{ alert.cooperative.name }} - {{ alert.rule.name }}</h6>
-                        <p class="mb-0 fs--1 text-600">{{ alert.message }}</p>
-                    </div>
-                    <div class="col-auto">
-                        <span class="badge badge-soft-danger">{% trans "Actif" %}</span>
-                    </div>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card kpi-card neutral h-100 p-3">
+      <div class="text-muted small mb-1"><i class="bi bi-people me-1"></i>{% trans "Total Members" %}</div>
+      <div class="kpi-value text-primary">{{ total_members }}</div>
+      <div class="small text-muted mt-1">
+        <span class="text-success">{{ female_members }} {% trans "female" %}</span> ·
+        <span class="text-info">{{ youth_members }} {% trans "youth" %}</span>
+      </div>
     </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card kpi-card {% if avg_delinquency_rate and avg_delinquency_rate > 0.1 %}red{% elif avg_delinquency_rate and avg_delinquency_rate > 0.05 %}amber{% else %}green{% endif %} h-100 p-3">
+      <div class="text-muted small mb-1"><i class="bi bi-exclamation-circle me-1"></i>{% trans "Avg. PAR30 (Delinquency)" %}</div>
+      <div class="kpi-value">
+        {% if avg_delinquency_rate %}{{ avg_delinquency_rate|floatformat:1 }}%{% else %}–{% endif %}
+      </div>
+      <div class="small text-muted mt-1">{% trans "Avg across cooperatives" %}</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card kpi-card {% if avg_oss and avg_oss >= 1.0 %}green{% elif avg_oss and avg_oss >= 0.8 %}amber{% else %}red{% endif %} h-100 p-3">
+      <div class="text-muted small mb-1"><i class="bi bi-check-circle me-1"></i>{% trans "Avg. Self-Sufficiency" %}</div>
+      <div class="kpi-value">
+        {% if avg_oss %}{{ avg_oss|floatformat:0 }}%{% else %}–{% endif %}
+      </div>
+      <div class="small text-muted mt-1">{% trans "Operational Self-Sufficiency" %}</div>
+    </div>
+  </div>
+</div>
+
+{# ── Second row: Liquidity, Capital, Alerts, Conflicts ───────────────────── #}
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="card kpi-card {% if avg_liquidity_ratio and avg_liquidity_ratio >= 0.15 %}green{% elif avg_liquidity_ratio and avg_liquidity_ratio >= 0.1 %}amber{% else %}red{% endif %} h-100 p-3">
+      <div class="text-muted small mb-1"><i class="bi bi-droplet-half me-1"></i>{% trans "Avg. Liquidity Ratio" %}</div>
+      <div class="kpi-value">{% if avg_liquidity_ratio %}{{ avg_liquidity_ratio|floatformat:1 }}%{% else %}–{% endif %}</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card kpi-card {% if avg_capital_adequacy and avg_capital_adequacy >= 0.1 %}green{% elif avg_capital_adequacy and avg_capital_adequacy >= 0.06 %}amber{% else %}red{% endif %} h-100 p-3">
+      <div class="text-muted small mb-1"><i class="bi bi-shield me-1"></i>{% trans "Avg. Capital Adequacy" %}</div>
+      <div class="kpi-value">{% if avg_capital_adequacy %}{{ avg_capital_adequacy|floatformat:1 }}%{% else %}–{% endif %}</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card kpi-card {% if open_alert_count > 0 %}amber{% else %}green{% endif %} h-100 p-3">
+      <div class="text-muted small mb-1"><i class="bi bi-bell me-1"></i>{% trans "Open Data Alerts" %}</div>
+      <div class="kpi-value text-warning">{{ open_alert_count }}</div>
+      {% if open_alert_count > 0 %}
+      <a href="{% url 'analytics:alert_list' %}?resolved=0" class="small stretched-link">{% trans "Review alerts" %}</a>
+      {% endif %}
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card kpi-card {% if pending_conflicts > 0 %}amber{% else %}neutral{% endif %} h-100 p-3">
+      <div class="text-muted small mb-1"><i class="bi bi-arrow-left-right me-1"></i>{% trans "Sync Conflicts" %}</div>
+      <div class="kpi-value">{{ pending_conflicts }}</div>
+      <div class="small text-muted">{% trans "Pending resolution" %}</div>
+    </div>
+  </div>
+</div>
+
+{# ── Charts row ──────────────────────────────────────────────────────────── #}
+<div class="row g-4 mb-4">
+  {# KPI Trend Line #}
+  <div class="col-md-8">
+    <div class="card border-0 shadow-sm p-3">
+      <div class="d-flex justify-content-between mb-2">
+        <h6 class="mb-0 fw-semibold">{% trans "KPI Trends (Quarterly)" %}</h6>
+        <a href="{% url 'analytics:chart_kpi_trend' %}" class="small text-muted" target="_blank">JSON</a>
+      </div>
+      <canvas id="kpiTrendChart" height="80"></canvas>
+    </div>
+  </div>
+  {# Demographics donut #}
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm p-3">
+      <h6 class="mb-2 fw-semibold">{% trans "Member Gender Split" %}</h6>
+      <canvas id="genderChart" height="180"></canvas>
+      <div class="mt-2 small text-center text-muted">
+        {% trans "Youth:" %} {{ youth_members }} · {% trans "Marginalized:" %} {{ marginalized_members }}
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ── Breakdown tables ────────────────────────────────────────────────────── #}
+<div class="row g-4">
+  {# By cooperative type #}
+  <div class="col-md-6">
+    <div class="card border-0 shadow-sm p-3">
+      <h6 class="fw-semibold mb-3">{% trans "Cooperatives by Type" %}</h6>
+      <table class="table table-sm table-borderless">
+        <thead class="table-light"><tr><th>{% trans "Type" %}</th><th class="text-end">{% trans "Count" %}</th></tr></thead>
+        <tbody>
+          {% for row in type_breakdown %}
+          <tr>
+            <td>{{ row.type|title }}</td>
+            <td class="text-end"><span class="badge bg-primary rounded-pill">{{ row.count }}</span></td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="2" class="text-muted text-center">{% trans "No data" %}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {# By region #}
+  <div class="col-md-6">
+    <div class="card border-0 shadow-sm p-3">
+      <h6 class="fw-semibold mb-3">{% trans "Cooperatives by Region" %}</h6>
+      <table class="table table-sm table-borderless">
+        <thead class="table-light"><tr><th>{% trans "Region" %}</th><th class="text-end">{% trans "Count" %}</th></tr></thead>
+        <tbody>
+          {% for row in region_breakdown %}
+          <tr>
+            <td>{{ row.region__name }}</td>
+            <td class="text-end"><span class="badge bg-secondary rounded-pill">{{ row.count }}</span></td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="2" class="text-muted text-center">{% trans "No data" %}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{# Recent audit log (admin only) #}
+{% if recent_audits %}
+<div class="card border-0 shadow-sm p-3 mt-4">
+  <div class="d-flex justify-content-between mb-2">
+    <h6 class="fw-semibold mb-0">{% trans "Recent Activity" %}</h6>
+    <a href="{% url 'users:audit_log' %}" class="small">{% trans "View all" %}</a>
+  </div>
+  <table class="table table-sm table-hover mb-0">
+    <tbody>
+      {% for log in recent_audits %}
+      <tr>
+        <td class="text-muted small">{{ log.timestamp|timesince }} {% trans "ago" %}</td>
+        <td><span class="badge bg-light text-dark">{{ log.get_action_display }}</span></td>
+        <td class="text-truncate" style="max-width:300px">{{ log.description }}</td>
+        <td class="text-muted small">{{ log.user.username|default:"–" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
 </div>
 {% endif %}
 
-<div class="card mb-3">
-    <div class="card-header">
-        <h5 class="mb-0">{% trans "Participation des Jeunes par Coopérative (%)" %}</h5>
-    </div>
-    <div class="card-body bg-light">
-        <div class="row g-3">
-            {% for item in youth_counts %}
-            <div class="col-sm-6 col-md-4">
-                <div class="bg-white border rounded-1 p-3 shadow-none">
-                    <div class="d-flex align-items-center">
-                        <div class="flex-1 ms-3">
-                            <h6 class="mb-0">{{ item.coop_name }}</h6>
-                            <p class="mb-0 fs--1 text-500">{{ item.youth_participation }}%</p>
-                        </div>
-                    </div>
-                    <div class="progress mt-3" style="height: 5px;">
-                      <div class="progress-bar bg-primary" role="progressbar" style="width:{{ item.youth_participation }}%;" aria-valuenow="{{ item.youth_participation }}" aria-valuemin="0" aria-valuemax="100"></div>
-                    </div>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-</div>
+{% endblock %}
 
-<div class="card mb-3">
-    <div class="card-header bg-light">
-        <h5 class="mb-0">{% trans "Productions Récentes (Générique)" %}</h5>
-    </div>
-    <div class="card-body p-0">
-        <div class="table-responsive scrollbar">
-            <table class="table table-sm table-striped fs--1 mb-0 overflow-hidden">
-                <thead class="bg-200 text-900">
-                    <tr>
-                        <th class="align-middle">{% trans "Coopérative" %}</th>
-                        <th class="align-middle">{% trans "Membre" %}</th>
-                        <th class="align-middle">{% trans "Produit" %}</th>
-                        <th class="align-middle text-end">{% trans "Quantité (kg)" %}</th>
-                        <th class="align-middle text-end">{% trans "Date" %}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for record in recent_production %}
-                    <tr>
-                        <td class="align-middle">{{ record.farm.member.cooperative.name }}</td>
-                        <td class="align-middle">{{ record.farm.member.first_name }} {{ record.farm.member.last_name }}</td>
-                        <td class="align-middle">{{ record.get_crop_type_display }}</td>
-                        <td class="align-middle text-end">{{ record.quantity_kg }}</td>
-                        <td class="align-middle text-end">{{ record.harvest_date|date:"d/m/Y" }}</td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="5" class="text-center py-4">{% trans "Aucune production récente." %}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
+{% block extra_scripts %}
+<script>
+// KPI Trend chart
+(async () => {
+  const res = await fetch("{% url 'analytics:chart_kpi_trend' %}");
+  const d = await res.json();
+  new Chart(document.getElementById('kpiTrendChart'), {
+    type: 'line',
+    data: {
+      labels: d.labels,
+      datasets: [
+        { label: '{% trans "PAR30 %" %}', data: d.delinquency, borderColor: '#E74C3C', tension: .4, fill: false },
+        { label: '{% trans "Liquidity %" %}', data: d.liquidity, borderColor: '#27AE60', tension: .4, fill: false },
+        { label: '{% trans "Capital Adequacy %" %}', data: d.capital, borderColor: '#2E86C1', tension: .4, fill: false },
+      ]
+    },
+    options: { plugins: { legend: { position: 'bottom' } }, scales: { y: { beginAtZero: true } } }
+  });
+})();
 
-<div class="card mb-3">
-    <div class="card-header bg-light">
-        <h5 class="mb-0">{% trans "Livraisons de Cerises Récentes" %}</h5>
-    </div>
-    <div class="card-body p-0">
-        <div class="table-responsive scrollbar">
-            <table class="table table-sm table-striped fs--1 mb-0 overflow-hidden">
-                <thead class="bg-200 text-900">
-                    <tr>
-                        <th class="align-middle">{% trans "Station" %}</th>
-                        <th class="align-middle">{% trans "Membre" %}</th>
-                        <th class="align-middle">{% trans "Code Producteur" %}</th>
-                        <th class="align-middle text-end">{% trans "Quantité (kg)" %}</th>
-                        <th class="align-middle text-end">{% trans "Date" %}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for record in recent_deliveries %}
-                    <tr>
-                        <td class="align-middle">{{ record.station.name }}</td>
-                        <td class="align-middle">{{ record.member.first_name }} {{ record.member.last_name }}</td>
-                        <td class="align-middle">{{ record.member.farmer_code }}</td>
-                        <td class="align-middle text-end">{{ record.quantity_kg }}</td>
-                        <td class="align-middle text-end">{{ record.created_at|date:"d/m/Y H:i" }}</td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="5" class="text-center py-4">{% trans "Aucune livraison de cerises récente." %}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
-
-<div class="card mb-3">
-    <div class="card-header bg-light">
-        <h5 class="mb-0">{% trans "Soumissions Récentes" %}</h5>
-    </div>
-    <div class="card-body bg-light">
-        <div class="table-responsive scrollbar">
-            <table class="table table-sm table-striped fs--1 mb-0 overflow-hidden">
-                <thead class="bg-200 text-900">
-                    <tr>
-                        <th class="align-middle">{% trans "Questionnaire" %}</th>
-                        <th class="align-middle">{% trans "Cible" %}</th>
-                        <th class="align-middle">{% trans "Soumis par" %}</th>
-                        <th class="align-middle text-end">{% trans "Date" %}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for submission in recent_submissions %}
-                    <tr>
-                        <td class="align-middle">
-                            <a href="{% url 'questionnaires:submission_detail' submission.unique_id %}" class="fw-semi-bold">{{ submission.questionnaire.title }}</a>
-                        </td>
-                        <td class="align-middle">{{ submission.content_object }}</td>
-                        <td class="align-middle">{{ submission.submitted_by.get_full_name|default:submission.submitted_by.email }}</td>
-                        <td class="align-middle text-end">{{ submission.submitted_at|date:"d/m/Y" }}</td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="4" class="text-center py-4">{% trans "Aucune soumission récente." %}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
+// Gender donut
+(async () => {
+  const res = await fetch("{% url 'analytics:chart_demographics' %}");
+  const d = await res.json();
+  const labels = d.gender.map(r => r.gender);
+  const values = d.gender.map(r => r.count);
+  new Chart(document.getElementById('genderChart'), {
+    type: 'doughnut',
+    data: { labels, datasets: [{ data: values, backgroundColor: ['#2E86C1','#F39C12','#95A5A6'] }] },
+    options: { plugins: { legend: { position: 'bottom' } } }
+  });
+})();
+</script>
 {% endblock %}
