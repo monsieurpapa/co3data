@@ -256,22 +256,13 @@ class SyncPullView(APIView):
                 return Response({"error": "Invalid since datetime."}, status=400)
 
         # Build scoped data delta
-        from cooperatives.models import Cooperative, Member
+        from cooperatives.models import Member
         from cooperatives.serializers import CooperativeSerializer, MemberSerializer
 
         user = request.user
-        coop_qs = Cooperative.objects.all()
-        if user.role == "sacco_manager":
-            coop_qs = coop_qs.filter(contact_person=user)
-        elif user.role == "regional_officer" and user.region:
-            coop_qs = coop_qs.filter(region=user.region)
-        elif user.role == "field_agent":
-            # Field agents pull cooperatives in their region only
-            if user.region:
-                coop_qs = coop_qs.filter(region=user.region)
-
-        if since:
-            coop_qs = coop_qs.filter(updated_at__gt=since)
+        # `since` isn't applied to cooperatives/members below: neither model tracks
+        # an updated_at timestamp, so pulls are always a full scoped snapshot.
+        coop_qs = user.get_accessible_cooperatives()
         member_qs = Member.objects.filter(cooperative__in=coop_qs)
 
         delta = {

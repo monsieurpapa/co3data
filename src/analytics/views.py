@@ -1,63 +1,22 @@
 # src/analytics/views.py
-# ─────────────────────────────────────────────────────────────────────────────
-# CoopData – Analytics & Dashboard views (Eswatini / SUCOSA II)
-# TOR §3.4 – real-time visual dashboards, exportable reports, trend analysis
-# ─────────────────────────────────────────────────────────────────────────────
 import json
-from datetime import date, timedelta
+from datetime import timedelta
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db.models import Avg, Count, Q, Sum
-from django.http import HttpResponse, JsonResponse
-from django.shortcuts import get_object_or_404, redirect
-from django.urls import reverse_lazy
+from django.db.models import Count, Q, Sum
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
-from django.views.generic import DetailView, ListView, TemplateView, View
+from django.views.generic import ListView, TemplateView, View
 
-from cooperatives.models import (
-    Cooperative,
-    LoanAccount,
-    Member,
-    SACCOFinancialSummary,
-    TrainingRecord,
-)
+from cooperatives.models import Cooperative, Member, ProductionRecord
+from questionnaires.models import Submission
 from users.models import AuditLog
 
-from .models import (
-    BenchmarkThreshold,
-    DataQualityAlert,
-    ExportJob,
-    KPI,
-    ReportConfiguration,
-)
-
-
-# ── Helpers ───────────────────────────────────────────────────────────────────
-
-def _scope_cooperatives(user):
-    """Return a Cooperative queryset scoped to the requesting user's role."""
-    qs = Cooperative.objects.all()
-    if user.role == "sacco_manager":
-        return qs.filter(contact_person=user)
-    if user.role == "regional_officer" and user.region:
-        return qs.filter(region=user.region)
-    return qs
-
-
-def _latest_summaries(cooperatives_qs):
-    """Return the most recent verified SACCOFinancialSummary for each cooperative."""
-    coop_ids = cooperatives_qs.values_list("id", flat=True)
-    seen: set = set()
-    result = []
-    for s in SACCOFinancialSummary.objects.filter(
-        cooperative_id__in=coop_ids, is_verified=True
-    ).order_by("cooperative_id", "-period_end"):
-        if s.cooperative_id not in seen:
-            seen.add(s.cooperative_id)
-            result.append(s)
-    return result
+from .models import DataQualityAlert, ExportJob, KPI, ReportConfiguration
+from .services import KPIService
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -65,198 +24,121 @@ def _latest_summaries(cooperatives_qs):
 # ═════════════════════════════════════════════════════════════════════════════
 
 class DashboardView(LoginRequiredMixin, TemplateView):
-    """
-    Role-aware landing dashboard.
-    Government/Apex: system-wide aggregates.
-    Regional Officer: region-level aggregates.
-    SACCO Manager: single cooperative KPIs.
-    TOR §3.4 – real-time visual dashboards and KPIs.
-    """
+    """Role-aware landing dashboard, scoped to the user's accessible cooperatives."""
     template_name = "analytics/dashboard.html"
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         user = self.request.user
-        coops = _scope_cooperatives(user)
-        summaries = _latest_summaries(coops)
+        coops = user.get_accessible_cooperatives()
+        coop_ids = coops.values_list("id", flat=True)
 
-        # ── Headline stats ────────────────────────────────────────────────────
-        ctx["total_cooperatives"] = coops.filter(status="active").count()
-        ctx["total_members"] = Member.objects.filter(
-            cooperative__in=coops, is_active=True
-        ).count()
-        ctx["female_members"] = Member.objects.filter(
-            cooperative__in=coops, is_active=True, gender="female"
-        ).count()
-        ctx["youth_members"] = Member.objects.filter(
-            cooperative__in=coops, is_active=True, is_youth=True
-        ).count()
-        ctx["marginalized_members"] = Member.objects.filter(
-            cooperative__in=coops, is_active=True, is_marginalized=True
-        ).count()
+        members = Member.objects.filter(cooperative__in=coops, is_active=True)
+        production = ProductionRecord.objects.filter(member__cooperative__in=coops)
+        alerts = DataQualityAlert.objects.filter(cooperative_id__in=coop_ids)
+        submissions = Submission.objects.filter(submitted_by__cooperative__in=coops)
 
-        # ── Aggregated financial KPIs (average across latest summaries) ───────
-        if summaries:
-            def _avg(field):
-                vals = [
-                    getattr(s, field)
-                    for s in summaries
-                    if getattr(s, field) is not None
-                ]
-                return round(sum(vals) / len(vals), 4) if vals else None
+        ctx["total_cooperatives"] = coops.count()
+        ctx["total_members"] = members.count()
+        ctx["female_members"] = members.filter(gender="female").count()
+        ctx["youth_members"] = members.filter(age_group="youth").count()
+        ctx["marginalized_members"] = members.filter(is_marginalized=True).count()
 
-            ctx["avg_delinquency_rate"] = _avg("kpi_delinquency_rate") * 100 if _avg("kpi_delinquency_rate") is not None else None
-            ctx["avg_liquidity_ratio"] = _avg("kpi_liquidity_ratio") * 100 if _avg("kpi_liquidity_ratio") is not None else None
-            ctx["avg_capital_adequacy"] = _avg("kpi_capital_adequacy") * 100 if _avg("kpi_capital_adequacy") is not None else None
-            ctx["avg_oss"] = _avg("kpi_operational_self_sufficiency") * 100 if _avg("kpi_operational_self_sufficiency") is not None else None
+        # ── Youth participation per cooperative ────────────────────────────────
+        youth_counts = []
+        for coop in KPIService.get_cooperatives_with_youth_data(coops):
+            pct = (coop.youth_members_count / coop.total_members_count * 100) if coop.total_members_count else 0
+            youth_counts.append({"coop_name": coop.name, "youth_participation": round(pct, 2)})
+        ctx["youth_counts"] = youth_counts
 
-            total_glp = sum(
-                s.gross_loan_portfolio for s in summaries if s.gross_loan_portfolio
-            )
-            total_par30 = sum(s.par_30_days for s in summaries if s.par_30_days)
-            ctx["total_gross_loan_portfolio"] = total_glp
-            ctx["total_par30"] = total_par30
+        # ── Average yield per hectare ────────────────────────────────────────
+        total_yield, coops_with_yield = 0, 0
+        for coop in KPIService.get_cooperatives_with_yield_data(coops):
+            if coop.total_farm_size_ha and coop.total_farm_size_ha > 0:
+                coop_yield = float(coop.total_production_kg or 0) / float(coop.total_farm_size_ha)
+                if coop_yield > 0:
+                    total_yield += coop_yield
+                    coops_with_yield += 1
+        ctx["avg_yield"] = round(total_yield / coops_with_yield, 2) if coops_with_yield else 0
 
-        # ── Trend data for Chart.js (last 6 periods) ──────────────────────────
-        ctx["trend_data"] = _build_trend_data(coops)
+        # ── Cherry delivery volume this month ───────────────────────────────
+        month_start = timezone.now().date().replace(day=1)
+        deliveries_this_month = production.filter(
+            record_type=ProductionRecord.RECORD_TYPE_CHERRY, purchase_date__gte=month_start
+        )
+        ctx["cherry_kg_this_month"] = deliveries_this_month.aggregate(t=Sum("quantity_kg"))["t"] or 0
+        ctx["cherry_value_fc_this_month"] = deliveries_this_month.aggregate(t=Sum("total_price_fc"))["t"] or 0
 
-        # ── Unresolved data quality alerts ────────────────────────────────────
-        ctx["open_alert_count"] = DataQualityAlert.objects.filter(
-            is_resolved=False,
-            cooperative_id__in=coops.values_list("id", flat=True),
-        ).count()
+        # ── Recent production / deliveries ──────────────────────────────────
+        ctx["recent_production"] = production.filter(
+            record_type=ProductionRecord.RECORD_TYPE_GENERIC
+        ).select_related("farm__member__cooperative").order_by("-harvest_date")[:10]
+        ctx["recent_deliveries"] = production.filter(
+            record_type=ProductionRecord.RECORD_TYPE_CHERRY
+        ).select_related("member", "station").order_by("-id")[:10]
 
-        # ── Pending sync conflicts ────────────────────────────────────────────
+        # ── Data quality alerts ─────────────────────────────────────────────
+        ctx["quality_alerts"] = alerts.select_related("rule").filter(is_resolved=False).order_by("-alert_date")[:5]
+        ctx["open_alert_count"] = alerts.filter(is_resolved=False).count()
+
+        # ── Recent submissions ───────────────────────────────────────────────
+        ctx["recent_submissions"] = submissions.select_related("questionnaire", "submitted_by").order_by("-submitted_at")[:5]
+        ctx["total_submissions"] = submissions.count()
+
+        # ── Pending sync conflicts ───────────────────────────────────────────
         from sync.models import SyncConflict
-        ctx["pending_conflicts"] = SyncConflict.objects.filter(
-            resolved_at__isnull=True
-        ).count()
+        ctx["pending_conflicts"] = SyncConflict.objects.filter(resolved_at__isnull=True).count()
 
-        # ── Recent audit events (admins/government only) ──────────────────────
-        if user.role in ("system_admin", "government", "apex_body"):
+        # ── Recent audit events (admins/government/apex only) ──────────────
+        if user.is_superuser or user.role in (user.ROLE_ADMIN, user.ROLE_GOVERNMENT, user.ROLE_APEX_BODY):
             ctx["recent_audits"] = AuditLog.objects.order_by("-timestamp")[:10]
 
-        # ── Cooperative breakdown by type ─────────────────────────────────────
-        ctx["type_breakdown"] = list(
-            coops.values("type").annotate(count=Count("id")).order_by("-count")
-        )
-        # ── Region breakdown ──────────────────────────────────────────────────
-        ctx["region_breakdown"] = list(
-            coops.values("region__name").annotate(count=Count("id")).order_by("-count")
-        )
+        # ── Breakdown by type / region ───────────────────────────────────────
+        ctx["type_breakdown"] = list(coops.values("type").annotate(count=Count("id")).order_by("-count"))
+        ctx["region_breakdown"] = list(coops.values("region__name").annotate(count=Count("id")).order_by("-count"))
+
+        ctx["trend_data"] = _build_trend_data(coops)
 
         return ctx
 
 
 def _build_trend_data(cooperatives_qs):
-    """Return JSON-serialisable dict for Chart.js trend line (6 periods)."""
-    coop_ids = list(cooperatives_qs.values_list("id", flat=True))
-    recent = (
-        SACCOFinancialSummary.objects
-        .filter(cooperative_id__in=coop_ids, is_verified=True, period_type="quarterly")
-        .order_by("period_end")
-        .values(
-            "period_end",
-            "kpi_delinquency_rate",
-            "kpi_liquidity_ratio",
-            "kpi_capital_adequacy",
+    """Return JSON-serialisable dict for Chart.js: cherry delivery volume, last 6 months."""
+    member_ids = Member.objects.filter(cooperative__in=cooperatives_qs).values_list("id", flat=True)
+    today = timezone.now().date()
+    months = []
+    for i in range(5, -1, -1):
+        month_date = (today.replace(day=1) - timedelta(days=30 * i)).replace(day=1)
+        months.append(month_date)
+
+    labels, volumes, values = [], [], []
+    for i, month_start in enumerate(months):
+        month_end = (months[i + 1] - timedelta(days=1)) if i + 1 < len(months) else today
+        qs = ProductionRecord.objects.filter(
+            record_type=ProductionRecord.RECORD_TYPE_CHERRY,
+            member_id__in=member_ids,
+            purchase_date__gte=month_start,
+            purchase_date__lte=month_end,
         )
-    )
-    # Aggregate per period_end
-    buckets: dict = {}
-    for r in recent:
-        key = str(r["period_end"])
-        if key not in buckets:
-            buckets[key] = {"par": [], "liq": [], "cap": []}
-        if r["kpi_delinquency_rate"]:
-            buckets[key]["par"].append(float(r["kpi_delinquency_rate"]))
-        if r["kpi_liquidity_ratio"]:
-            buckets[key]["liq"].append(float(r["kpi_liquidity_ratio"]))
-        if r["kpi_capital_adequacy"]:
-            buckets[key]["cap"].append(float(r["kpi_capital_adequacy"]))
+        agg = qs.aggregate(kg=Sum("quantity_kg"), fc=Sum("total_price_fc"))
+        labels.append(month_start.strftime("%b %Y"))
+        volumes.append(float(agg["kg"] or 0))
+        values.append(float(agg["fc"] or 0))
 
-    labels = sorted(buckets.keys())[-6:]
-    avg = lambda lst: round(sum(lst) / len(lst) * 100, 2) if lst else None
-
-    return {
-        "labels": labels,
-        "delinquency": [avg(buckets[l]["par"]) for l in labels],
-        "liquidity": [avg(buckets[l]["liq"]) for l in labels],
-        "capital": [avg(buckets[l]["cap"]) for l in labels],
-    }
+    return {"labels": labels, "volume_kg": volumes, "value_fc": values}
 
 
 # ═════════════════════════════════════════════════════════════════════════════
-# KPI DEEP-DIVE
+# KPI CATALOGUE
 # ═════════════════════════════════════════════════════════════════════════════
 
 class KPIListView(LoginRequiredMixin, TemplateView):
-    """All KPIs with latest values for scoped cooperatives."""
+    """All active KPIs (catalogue is admin-configurable, not hardcoded)."""
     template_name = "analytics/kpi_list.html"
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx["kpis"] = KPI.objects.filter(is_active=True).order_by("display_order")
-        return ctx
-
-
-class CooperativeKPIDashboardView(LoginRequiredMixin, DetailView):
-    """
-    Full KPI scorecard for a single cooperative.
-    Shows latest KPIs, 6-period trend chart, benchmark traffic lights.
-    TOR §3.4 – KPIs by cooperative.
-    """
-    model = Cooperative
-    template_name = "analytics/cooperative_kpi_dashboard.html"
-    context_object_name = "cooperative"
-
-    def get_context_data(self, **kwargs):
-        ctx = super().get_context_data(**kwargs)
-        coop = self.object
-        summaries = (
-            SACCOFinancialSummary.objects
-            .filter(cooperative=coop, is_verified=True)
-            .order_by("-period_end")[:8]
-        )
-        ctx["summaries"] = summaries
-        ctx["latest"] = summaries[0] if summaries else None
-        ctx["kpis"] = KPI.objects.filter(is_active=True).order_by("display_order")
-        ctx["benchmarks"] = {
-            bt.kpi_id: bt
-            for bt in BenchmarkThreshold.objects.filter(is_default=True)
-        }
-        # Trend JSON for Chart.js
-        labels = [str(s.period_end) for s in reversed(list(summaries))]
-        ctx["trend_json"] = json.dumps({
-            "labels": labels,
-            "par30": [
-                float(s.kpi_delinquency_rate * 100) if s.kpi_delinquency_rate else None
-                for s in reversed(list(summaries))
-            ],
-            "liquidity": [
-                float(s.kpi_liquidity_ratio * 100) if s.kpi_liquidity_ratio else None
-                for s in reversed(list(summaries))
-            ],
-            "capital": [
-                float(s.kpi_capital_adequacy * 100) if s.kpi_capital_adequacy else None
-                for s in reversed(list(summaries))
-            ],
-        })
-        # Comparison: how does this coop rank vs peers in same region?
-        peer_summaries = _latest_summaries(
-            Cooperative.objects.filter(region=coop.region, status="active").exclude(pk=coop.pk)
-        )
-        if peer_summaries and ctx["latest"]:
-            def rank(field):
-                val = getattr(ctx["latest"], field)
-                if val is None:
-                    return None
-                peers = [getattr(s, field) for s in peer_summaries if getattr(s, field)]
-                above = sum(1 for p in peers if p < val)  # lower = better for PAR
-                return above + 1
-            ctx["par_rank"] = rank("kpi_delinquency_rate")
-            ctx["peer_count"] = len(peer_summaries)
-
         return ctx
 
 
@@ -272,8 +154,7 @@ class DataQualityAlertListView(LoginRequiredMixin, ListView):
 
     def get_queryset(self):
         qs = DataQualityAlert.objects.select_related("rule", "resolved_by")
-        user = self.request.user
-        coops = _scope_cooperatives(user)
+        coops = self.request.user.get_accessible_cooperatives()
         qs = qs.filter(cooperative_id__in=coops.values_list("id", flat=True))
         resolved = self.request.GET.get("resolved")
         if resolved == "0":
@@ -317,25 +198,16 @@ class ReportListView(LoginRequiredMixin, ListView):
     def get_queryset(self):
         user = self.request.user
         qs = ReportConfiguration.objects.all()
-        # Filter by allowed roles
         if not user.is_superuser:
-            qs = qs.filter(
-                Q(allowed_roles__contains=user.role)
-                | Q(allowed_roles=[])
-            )
+            qs = qs.filter(Q(allowed_roles__contains=user.role) | Q(allowed_roles=[]))
         return qs.order_by("name")
 
 
 class ReportRunView(LoginRequiredMixin, View):
-    """
-    POST: queue a report generation job (Celery).
-    GET: show report parameters form.
-    TOR §3.4 – exportable reports PDF / Excel / Word.
-    """
+    """GET: show report parameters form. POST: queue a report generation job (Celery)."""
 
     def get(self, request, pk):
         report = get_object_or_404(ReportConfiguration, pk=pk)
-        from django.shortcuts import render
         return render(request, "analytics/report_run.html", {"report": report})
 
     def post(self, request, pk):
@@ -347,7 +219,7 @@ class ReportRunView(LoginRequiredMixin, View):
             format=fmt,
             parameters_snapshot=report.parameters,
         )
-        from integrations.tasks import generate_export
+        from core.tasks import generate_export
         generate_export.delay(job.pk)
         AuditLog.objects.create(
             user=request.user,
@@ -355,10 +227,7 @@ class ReportRunView(LoginRequiredMixin, View):
             description=f"Requested export: {report.name} [{fmt}]",
             ip_address=request.META.get("REMOTE_ADDR"),
         )
-        messages.info(
-            request,
-            _(f"Report queued. You'll be notified when it's ready."),
-        )
+        messages.info(request, _("Report queued. You'll be notified when it's ready."))
         return redirect("analytics:export_job_list")
 
 
@@ -369,60 +238,27 @@ class ExportJobListView(LoginRequiredMixin, ListView):
     paginate_by = 20
 
     def get_queryset(self):
-        return ExportJob.objects.filter(
-            requested_by=self.request.user
-        ).order_by("-requested_at")
+        return ExportJob.objects.filter(requested_by=self.request.user).order_by("-requested_at")
 
 
 # ═════════════════════════════════════════════════════════════════════════════
-# CHART DATA ENDPOINTS (AJAX / REST)
+# CHART DATA ENDPOINTS (AJAX)
 # ═════════════════════════════════════════════════════════════════════════════
 
 class SystemKPIChartDataView(LoginRequiredMixin, View):
-    """
-    JSON endpoint consumed by Chart.js on the dashboard.
-    Returns aggregated KPI trend data for the scoped cooperatives.
-    """
+    """JSON endpoint consumed by Chart.js on the dashboard: cherry delivery trend."""
 
     def get(self, request):
-        coops = _scope_cooperatives(request.user)
-        data = _build_trend_data(coops)
-        return JsonResponse(data)
+        coops = request.user.get_accessible_cooperatives()
+        return JsonResponse(_build_trend_data(coops))
 
 
 class MemberDemographicsChartView(LoginRequiredMixin, View):
     """JSON: member breakdown by gender and age_group for Chart.js pie/bar."""
 
     def get(self, request):
-        coops = _scope_cooperatives(request.user)
+        coops = request.user.get_accessible_cooperatives()
         members = Member.objects.filter(cooperative__in=coops, is_active=True)
-        gender_data = list(
-            members.values("gender").annotate(count=Count("id"))
-        )
-        age_data = list(
-            members.values("age_group").annotate(count=Count("id"))
-        )
+        gender_data = list(members.values("gender").annotate(count=Count("id")))
+        age_data = list(members.values("age_group").annotate(count=Count("id")))
         return JsonResponse({"gender": gender_data, "age_group": age_data})
-
-
-class LoanPortfolioChartView(LoginRequiredMixin, View):
-    """JSON: PAR30 / PAR90 / standard breakdown for doughnut chart."""
-
-    def get(self, request):
-        coops = _scope_cooperatives(request.user)
-        loans = LoanAccount.objects.filter(
-            member__cooperative__in=coops, status=LoanAccount.STATUS_ACTIVE
-        )
-        total = loans.aggregate(t=Sum("outstanding_balance"))["t"] or 0
-        par30 = loans.filter(days_in_arrears__gte=30).aggregate(
-            t=Sum("outstanding_balance")
-        )["t"] or 0
-        par90 = loans.filter(days_in_arrears__gte=90).aggregate(
-            t=Sum("outstanding_balance")
-        )["t"] or 0
-        current = total - par30
-        return JsonResponse({
-            "labels": ["Current", "PAR 30–90 days", "PAR 90+ days"],
-            "values": [float(current), float(par30 - par90), float(par90)],
-            "total": float(total),
-        })

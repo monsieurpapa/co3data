@@ -7,7 +7,6 @@ app_name = "analytics"
 urlpatterns = [
     path("", views.DashboardView.as_view(), name="dashboard"),
     path("kpis/", views.KPIListView.as_view(), name="kpi_list"),
-    path("kpis/<int:pk>/", views.CooperativeKPIDashboardView.as_view(), name="cooperative_kpi"),
     path("alerts/", views.DataQualityAlertListView.as_view(), name="alert_list"),
     path("alerts/<int:pk>/resolve/", views.DataQualityAlertResolveView.as_view(), name="alert_resolve"),
     path("reports/", views.ReportListView.as_view(), name="report_list"),
@@ -16,5 +15,4 @@ urlpatterns = [
     # Chart data endpoints
     path("charts/kpi-trend/", views.SystemKPIChartDataView.as_view(), name="chart_kpi_trend"),
     path("charts/demographics/", views.MemberDemographicsChartView.as_view(), name="chart_demographics"),
-    path("charts/loan-portfolio/", views.LoanPortfolioChartView.as_view(), name="chart_loan_portfolio"),
 ]

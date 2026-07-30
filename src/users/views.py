@@ -1,25 +1,19 @@
 # src/users/views.py
-# ─────────────────────────────────────────────────────────────────────────────
-# CoopData – User management views (Eswatini / SUCOSA II)
-# TOR §3.3 – user and access management with customisable permissions and audit trails
-# TOR §4   – 2FA for admins and sensitive accounts
-# ─────────────────────────────────────────────────────────────────────────────
 from django.contrib import messages
-from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
 from django.utils.translation import gettext_lazy as _
 from django.views.generic import (
-    CreateView, DetailView, ListView, TemplateView, UpdateView, View,
+    CreateView, DeleteView, DetailView, ListView, TemplateView, UpdateView, View,
 )
 
-from .forms import UserCreateForm, UserUpdateForm
-from .models import AuditLog, User
+from .forms import UserCreateForm, UserProfileForm, UserUpdateForm
+from .models import AuditLog, Region, User
 
 
-ADMIN_ROLES = ["system_admin"]
+ADMIN_ROLES = [User.ROLE_ADMIN]
 
 
 class AdminRequiredMixin(LoginRequiredMixin):
@@ -42,7 +36,7 @@ class UserListView(AdminRequiredMixin, ListView):
     paginate_by = 25
 
     def get_queryset(self):
-        qs = User.objects.select_related("region").order_by("last_name", "first_name")
+        qs = User.objects.select_related("region", "cooperative").order_by("last_name", "first_name")
         q = self.request.GET.get("q", "").strip()
         if q:
             qs = qs.filter(
@@ -60,8 +54,7 @@ class UserListView(AdminRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx["role_choices"] = User.USER_ROLES
-        from .models import Region
-        ctx["regions"] = Region.objects.filter(country_code="SZ").order_by("name")
+        ctx["regions"] = Region.objects.filter(country_code="CD").order_by("name")
         return ctx
 
 
@@ -69,12 +62,12 @@ class UserDetailView(AdminRequiredMixin, DetailView):
     model = User
     template_name = "users/user_detail.html"
     context_object_name = "target_user"
+    slug_field = "unique_id"
+    slug_url_kwarg = "uuid"
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        ctx["audit_logs"] = AuditLog.objects.filter(
-            user=self.object
-        ).order_by("-timestamp")[:20]
+        ctx["audit_logs"] = AuditLog.objects.filter(user=self.object).order_by("-timestamp")[:20]
         return ctx
 
 
@@ -94,7 +87,6 @@ class UserCreateView(AdminRequiredMixin, CreateView):
             object_id=str(self.object.pk),
             ip_address=self.request.META.get("REMOTE_ADDR"),
         )
-        # If role requires 2FA, flag for enrollment
         if self.object.requires_2fa:
             self.object.force_password_change = True
             self.object.save(update_fields=["force_password_change"])
@@ -107,6 +99,8 @@ class UserUpdateView(AdminRequiredMixin, UpdateView):
     form_class = UserUpdateForm
     template_name = "users/user_form.html"
     success_url = reverse_lazy("users:user_list")
+    slug_field = "unique_id"
+    slug_url_kwarg = "uuid"
 
     def form_valid(self, form):
         old_role = User.objects.get(pk=self.object.pk).role
@@ -127,11 +121,34 @@ class UserUpdateView(AdminRequiredMixin, UpdateView):
         return response
 
 
+class UserDeleteView(AdminRequiredMixin, DeleteView):
+    model = User
+    template_name = "users/user_confirm_delete.html"
+    success_url = reverse_lazy("users:user_list")
+    slug_field = "unique_id"
+    slug_url_kwarg = "uuid"
+
+    def post(self, request, *args, **kwargs):
+        target = self.get_object()
+        if target == request.user:
+            messages.error(request, _("You cannot delete your own account."))
+            return redirect("users:user_list")
+        AuditLog.objects.create(
+            user=request.user,
+            action=AuditLog.ACTION_DELETE,
+            description=f"Deleted user: {target.username}",
+            content_type_label="User",
+            object_id=str(target.pk),
+            ip_address=request.META.get("REMOTE_ADDR"),
+        )
+        return super().post(request, *args, **kwargs)
+
+
 class UserToggleActiveView(AdminRequiredMixin, View):
     """POST: activate or deactivate a user account."""
 
-    def post(self, request, pk):
-        user = get_object_or_404(User, pk=pk)
+    def post(self, request, uuid):
+        user = get_object_or_404(User, unique_id=uuid)
         user.is_active = not user.is_active
         user.save(update_fields=["is_active"])
         action = _("activated") if user.is_active else _("deactivated")
@@ -164,22 +181,15 @@ class ProfileView(LoginRequiredMixin, TemplateView):
 
 class ProfileUpdateView(LoginRequiredMixin, UpdateView):
     model = User
-    fields = ["first_name", "last_name", "email", "phone_number", "preferred_language"]
+    form_class = UserProfileForm
     template_name = "users/profile_form.html"
     success_url = reverse_lazy("users:profile")
 
     def get_object(self):
         return self.request.user
 
-    def get_form(self, form_class=None):
-        form = super().get_form(form_class)
-        for field in form.fields.values():
-            field.widget.attrs["class"] = "form-control"
-        return form
-
     def form_valid(self, form):
         response = super().form_valid(form)
-        # Activate language preference immediately
         lang = self.object.preferred_language
         from django.utils import translation
         translation.activate(lang)

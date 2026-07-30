@@ -37,28 +37,28 @@ def generate_default_questionnaires():
         print(f"Created Questionnaire: {census_q.title}")
         Question.objects.create(
             questionnaire=census_q,
-            question_text="Territoire (Ex: Kabare)",
+            text="Territoire (Ex: Kabare)",
             question_type='text',
             is_required=True,
             order=1
         )
         Question.objects.create(
             questionnaire=census_q,
-            question_text="Groupement (Ex: Luhihi)",
+            text="Groupement (Ex: Luhihi)",
             question_type='text',
             is_required=True,
             order=2
         )
         Question.objects.create(
             questionnaire=census_q,
-            question_text="Village (Ex: Izimero)",
+            text="Village (Ex: Izimero)",
             question_type='text',
             is_required=True,
             order=3
         )
         Question.objects.create(
             questionnaire=census_q,
-            question_text="Nombre des pies (Taille L/Ha ou Arbres)",
+            text="Nombre des pies (Taille L/Ha ou Arbres)",
             question_type='number',
             is_required=True,
             order=4
@@ -81,42 +81,42 @@ def generate_default_questionnaires():
         print(f"Created Questionnaire: {leadership_q.title}")
         Question.objects.create(
             questionnaire=leadership_q,
-            question_text="Nom du Président",
+            text="Nom du Président",
             question_type='text',
             is_required=True,
             order=1
         )
         Question.objects.create(
             questionnaire=leadership_q,
-            question_text="Contact du Président (Numéro de téléphone)",
+            text="Contact du Président (Numéro de téléphone)",
             question_type='text',
             is_required=False,
             order=2
         )
         Question.objects.create(
             questionnaire=leadership_q,
-            question_text="Nom du Vice-Président",
+            text="Nom du Vice-Président",
             question_type='text',
             is_required=True,
             order=3
         )
         Question.objects.create(
             questionnaire=leadership_q,
-            question_text="Contact du Vice-Président",
+            text="Contact du Vice-Président",
             question_type='text',
             is_required=False,
             order=4
         )
         Question.objects.create(
             questionnaire=leadership_q,
-            question_text="Nom du Secrétaire",
+            text="Nom du Secrétaire",
             question_type='text',
             is_required=True,
             order=5
         )
         Question.objects.create(
             questionnaire=leadership_q,
-            question_text="Contact du Secrétaire",
+            text="Contact du Secrétaire",
             question_type='text',
             is_required=False,
             order=6

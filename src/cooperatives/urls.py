@@ -1,9 +1,9 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .api import (
-    CooperativeViewSet, MemberViewSet, SACCOFinancialSummaryViewSet,
-    LoanAccountViewSet, SavingsAccountViewSet, BoardMemberViewSet,
-    TrainingRecordViewSet
+    CooperativeViewSet, MemberViewSet, FarmViewSet, ProductionRecordViewSet,
+    WashingStationViewSet, FinancialRecordViewSet, BuyerViewSet,
+    CooperativeCertificateViewSet, CooperativeSaleViewSet
 )
 
 from . import views
@@ -11,50 +11,71 @@ from . import views
 router = DefaultRouter()
 router.register(r"cooperatives", CooperativeViewSet)
 router.register(r"members", MemberViewSet)
-router.register(r"financial-summaries", SACCOFinancialSummaryViewSet)
-router.register(r"loans", LoanAccountViewSet)
-router.register(r"savings", SavingsAccountViewSet)
-router.register(r"board-members", BoardMemberViewSet)
-router.register(r"training-records", TrainingRecordViewSet)
+router.register(r"farms", FarmViewSet)
+router.register(r"production-records", ProductionRecordViewSet)
+router.register(r"stations", WashingStationViewSet)
+router.register(r"financial-records-api", FinancialRecordViewSet)
+router.register(r"buyers-api", BuyerViewSet)
+router.register(r"certificates-api", CooperativeCertificateViewSet)
+router.register(r"sales-api", CooperativeSaleViewSet)
 
 app_name = "cooperatives"
 
 urlpatterns = [
-    # ── Cooperatives ──────────────────────────────────────────────────────────
     path("", views.CooperativeListView.as_view(), name="cooperative_list"),
-    path("new/", views.CooperativeCreateView.as_view(), name="cooperative_create"),
-    path("<int:pk>/", views.CooperativeDetailView.as_view(), name="cooperative_detail"),
-    path("<int:pk>/edit/", views.CooperativeUpdateView.as_view(), name="cooperative_update"),
-    path("<int:pk>/delete/", views.CooperativeDeleteView.as_view(), name="cooperative_delete"),
- 
-    # ── Members (nested under cooperative) ───────────────────────────────────
-    path("<int:cooperative_pk>/members/", views.MemberListView.as_view(), name="member_list"),
-    path("<int:cooperative_pk>/members/new/", views.MemberCreateView.as_view(), name="member_create"),
-    path("members/", views.MemberListView.as_view(), name="member_list_all"),
-    path("members/<int:pk>/", views.MemberDetailView.as_view(), name="member_detail"),
-    path("members/<int:pk>/edit/", views.MemberUpdateView.as_view(), name="member_update"),
- 
-    # ── Financial Summaries ───────────────────────────────────────────────────
-    path("<int:cooperative_pk>/financials/", views.FinancialSummaryListView.as_view(), name="financial_summary_list"),
-    path("<int:cooperative_pk>/financials/new/", views.FinancialSummaryCreateView.as_view(), name="financial_summary_create"),
-    path("financials/", views.FinancialSummaryListView.as_view(), name="financial_summary_list_all"),
-    path("financials/<int:pk>/", views.FinancialSummaryDetailView.as_view(), name="financial_summary_detail"),
-    path("financials/<int:pk>/verify/", views.FinancialSummaryVerifyView.as_view(), name="financial_summary_verify"),
- 
-    # ── Board Members ─────────────────────────────────────────────────────────
-    path("<int:cooperative_pk>/board/add/", views.BoardMemberCreateView.as_view(), name="board_member_create"),
- 
-    # ── Training Records ──────────────────────────────────────────────────────
-    path("trainings/", views.TrainingRecordListView.as_view(), name="training_list_all"),
-    path("<int:cooperative_pk>/trainings/", views.TrainingRecordListView.as_view(), name="training_list"),
-    path("<int:cooperative_pk>/trainings/new/", views.TrainingRecordCreateView.as_view(), name="training_create"),
- 
-    # ── Loans ─────────────────────────────────────────────────────────────────
-    path("loans/", views.LoanAccountListView.as_view(), name="loan_list"),
-    path("loans/new/", views.LoanAccountCreateView.as_view(), name="loan_create"),
- 
-    # ── Savings ───────────────────────────────────────────────────────────────
-    path("savings/new/", views.SavingsAccountCreateView.as_view(), name="savings_create"),
+    path("add/", views.CooperativeCreateView.as_view(), name="cooperative_add"),
+    path("<uuid:uuid>/", views.CooperativeDetailView.as_view(), name="cooperative_detail"),
+    path("<uuid:uuid>/edit/", views.CooperativeUpdateView.as_view(), name="cooperative_edit"),
+    path("<uuid:uuid>/delete/", views.CooperativeDeleteView.as_view(), name="cooperative_delete"),
+
+    path("members/", views.MemberListView.as_view(), name="member_list"),
+    path("members/add/", views.MemberCreateView.as_view(), name="member_add"),
+    path("members/<uuid:uuid>/", views.MemberDetailView.as_view(), name="member_detail"),
+    path("members/<uuid:uuid>/edit/", views.MemberUpdateView.as_view(), name="member_edit"),
+    path("members/<uuid:uuid>/delete/", views.MemberDeleteView.as_view(), name="member_delete"),
+
+    path("cherry-deliveries/", views.CherryDeliveryListView.as_view(), name="cherry_delivery_list"),
+    path("cherry-deliveries/new/", views.CherryDeliveryCreateView.as_view(), name="cherry_delivery_create"),
+    path("cherry-deliveries/<uuid:uuid>/", views.CherryDeliveryDetailView.as_view(), name="cherry_delivery_detail"),
+    path("cherry-deliveries/<uuid:uuid>/edit/", views.CherryDeliveryUpdateView.as_view(), name="cherry_delivery_edit"),
+    path("cherry-deliveries/<uuid:uuid>/delete/", views.CherryDeliveryDeleteView.as_view(), name="cherry_delivery_delete"),
+
+    path("production-records/", views.ProductionRecordListView.as_view(), name="production_record_list"),
+    path("production-records/new/", views.ProductionRecordCreateView.as_view(), name="production_record_add"),
+    path("production-records/<uuid:uuid>/", views.ProductionRecordDetailView.as_view(), name="production_record_detail"),
+    path("production-records/<uuid:uuid>/edit/", views.ProductionRecordUpdateView.as_view(), name="production_record_edit"),
+    path("production-records/<uuid:uuid>/delete/", views.ProductionRecordDeleteView.as_view(), name="production_record_delete"),
+
+    path("financial-records/", views.FinancialRecordListView.as_view(), name="financial_record_list"),
+    path("financial-records/new/", views.FinancialRecordCreateView.as_view(), name="financial_record_add"),
+    path("financial-records/<uuid:uuid>/", views.FinancialRecordDetailView.as_view(), name="financial_record_detail"),
+    path("financial-records/<uuid:uuid>/edit/", views.FinancialRecordUpdateView.as_view(), name="financial_record_edit"),
+    path("financial-records/<uuid:uuid>/delete/", views.FinancialRecordDeleteView.as_view(), name="financial_record_delete"),
+
+    # Buyers
+    path("buyers/", views.BuyerListView.as_view(), name="buyer_list"),
+    path("buyers/add/", views.BuyerCreateView.as_view(), name="buyer_add"),
+    path("buyers/<uuid:uuid>/edit/", views.BuyerUpdateView.as_view(), name="buyer_edit"),
+    path("buyers/<uuid:uuid>/delete/", views.BuyerDeleteView.as_view(), name="buyer_delete"),
+
+    # Washing Stations
+    path("washing-stations/", views.WashingStationListView.as_view(), name="washing_station_list"),
+    path("washing-stations/add/", views.WashingStationCreateView.as_view(), name="washing_station_add"),
+    path("washing-stations/<uuid:uuid>/", views.WashingStationDetailView.as_view(), name="washing_station_detail"),
+    path("washing-stations/<uuid:uuid>/edit/", views.WashingStationUpdateView.as_view(), name="washing_station_edit"),
+    path("washing-stations/<uuid:uuid>/delete/", views.WashingStationDeleteView.as_view(), name="washing_station_delete"),
+
+    # Cooperative Certificates
+    path("<uuid:uuid>/certificates/", views.CooperativeCertificateListView.as_view(), name="cooperative_certificate_list"),
+    path("<uuid:uuid>/certificates/add/", views.CooperativeCertificateCreateView.as_view(), name="cooperative_certificate_add"),
+    path("<uuid:uuid>/certificates/<uuid:cert_uuid>/edit/", views.CooperativeCertificateUpdateView.as_view(), name="cooperative_certificate_edit"),
+    path("<uuid:uuid>/certificates/<uuid:cert_uuid>/delete/", views.CooperativeCertificateDeleteView.as_view(), name="cooperative_certificate_delete"),
+
+    # Cooperative Sales
+    path("<uuid:uuid>/sales/", views.CooperativeSaleListView.as_view(), name="cooperative_sale_list"),
+    path("<uuid:uuid>/sales/add/", views.CooperativeSaleCreateView.as_view(), name="cooperative_sale_add"),
+    path("<uuid:uuid>/sales/<uuid:sale_uuid>/edit/", views.CooperativeSaleUpdateView.as_view(), name="cooperative_sale_edit"),
+    path("<uuid:uuid>/sales/<uuid:sale_uuid>/delete/", views.CooperativeSaleDeleteView.as_view(), name="cooperative_sale_delete"),
 
     path("api/", include(router.urls)),
 ]

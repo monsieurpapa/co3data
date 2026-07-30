@@ -54,12 +54,6 @@
             {% endif %}
           </div>
  
-          <h6 class="text-uppercase small text-muted fw-semibold border-bottom pb-2 mb-3">{% trans "Inclusion Flags" %}</h6>
-          <div class="d-flex gap-4 mb-4">
-            <div class="form-check">{{ form.is_youth }}<label class="form-check-label small" for="{{ form.is_youth.id_for_label }}">{% trans "Youth (18–35)" %}</label></div>
-            <div class="form-check">{{ form.is_marginalized }}<label class="form-check-label small" for="{{ form.is_marginalized.id_for_label }}">{% trans "Marginalized Group" %}</label></div>
-          </div>
- 
           {% if form.instance.pk and form.instance.requires_2fa %}
           <div class="alert alert-info d-flex gap-2 align-items-start small">
             <i class="bi bi-shield-lock mt-1"></i>

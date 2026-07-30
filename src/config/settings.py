@@ -82,7 +82,6 @@ INSTALLED_APPS = [
     'cooperatives',
     'analytics',
     'questionnaires',
-    'organization',
     'sync',
 
     'rest_framework',

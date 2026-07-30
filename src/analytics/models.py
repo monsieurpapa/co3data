@@ -1,16 +1,12 @@
 # src/analytics/models.py
 # ─────────────────────────────────────────────────────────────────────────────
-# CoopData – Analytics, KPI, Reporting models
-# Aligned with DGRV / MCIT Eswatini TOR (SUCOSA II)
+# CO3DATA – Analytics, KPI, Reporting models
 #
-# Key changes vs original:
-#   • Seeded KPI catalogue matching TOR §3.1 metrics (delinquency, PAR,
-#     liquidity, capital adequacy, ROA, youth/gender participation, board
-#     composition, training hours, operational self-sufficiency)
-#   • ReportConfiguration now scoped to role and supports scheduled export
-#   • Added BenchmarkThreshold – configurable alert bands per KPI
-#   • DataValidationRule updated with severity levels & auto-fix hints
-#   • Added ExportJob to track async report generation (PDF/Excel/Word)
+# KPI/ReportConfiguration/BenchmarkThreshold/DataValidationRule/ExportJob are
+# generic and domain-agnostic (configurable via admin, not hardcoded to a
+# specific sector) — the actual KPI catalogue for coffee/cocoa cooperatives
+# (yield/hectare, cherry volume, youth/gender participation, board composition)
+# is seed data, not model structure.
 # ─────────────────────────────────────────────────────────────────────────────
 
 from django.db import models
@@ -27,9 +23,9 @@ import uuid
 class KPI(models.Model):
     """
     Defines a Key Performance Indicator.
-    Seed data (management command) populates standard SACCO KPIs listed in
-    TOR §3.1 (delinquency rate, liquidity ratio, capital adequacy, ROA, etc.)
-    as well as social KPIs (youth/gender participation, training hours).
+    Seed data (management command) populates coffee/cocoa KPIs — yield per
+    hectare, cherry volume, sales value, youth/gender participation, board
+    composition — configurable rather than hardcoded to a specific sector.
     """
 
     CATEGORY_FINANCIAL = "financial"
@@ -44,17 +40,12 @@ class KPI(models.Model):
         (CATEGORY_GOVERNANCE, _("Governance")),
     )
 
-    # Slug maps directly to field names in SACCOFinancialSummary
-    SLUG_DELINQUENCY_RATE = "kpi_delinquency_rate"
-    SLUG_LIQUIDITY_RATIO = "kpi_liquidity_ratio"
-    SLUG_CAPITAL_ADEQUACY = "kpi_capital_adequacy"
-    SLUG_ROA = "kpi_roa"
-    SLUG_COST_PER_BORROWER = "kpi_cost_per_borrower"
-    SLUG_PORTFOLIO_YIELD = "kpi_portfolio_yield"
-    SLUG_OSS = "kpi_operational_self_sufficiency"
+    # Slugs for the seeded coffee/cocoa KPI catalogue.
+    SLUG_YIELD_PER_HECTARE = "kpi_yield_per_hectare"
+    SLUG_CHERRY_VOLUME = "kpi_cherry_volume_kg"
+    SLUG_SALES_VALUE = "kpi_sales_value"
     SLUG_YOUTH_PART = "kpi_youth_participation_rate"
     SLUG_FEMALE_PART = "kpi_female_participation_rate"
-    SLUG_TRAINING_HOURS = "kpi_training_hours_per_member"
 
     unique_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, db_index=True)
     name = models.CharField(max_length=255, unique=True)
@@ -66,9 +57,9 @@ class KPI(models.Model):
     unit = models.CharField(
         max_length=30,
         blank=True,
-        help_text=_("e.g. % (percentage), SZL, ratio, hours"),
+        help_text=_("e.g. % (percentage), FC, USD, kg, ratio"),
     )
-    # Source field on SACCOFinancialSummary (if computed centrally)
+    # Source field on a model, if computed centrally (e.g. ProductionRecord.quantity_kg)
     source_field = models.CharField(
         max_length=100,
         blank=True,
@@ -116,7 +107,7 @@ class BenchmarkThreshold(models.Model):
     )
     label = models.CharField(
         max_length=50,
-        help_text=_("e.g. 'Eswatini SACCO Standard', 'WOCCU Best Practice'"),
+        help_text=_("e.g. 'ITC Benchmark', 'National Cooperative Standard'"),
     )
     green_min = models.DecimalField(
         max_digits=10, decimal_places=4, null=True, blank=True,
@@ -306,7 +297,7 @@ class DataValidationRule(models.Model):
     )
     applies_to_model = models.CharField(
         max_length=100,
-        help_text=_("e.g. 'cooperatives.SACCOFinancialSummary'"),
+        help_text=_("e.g. 'cooperatives.ProductionRecord'"),
     )
     applies_to_field = models.CharField(max_length=100, blank=True, null=True)
     severity = models.CharField(

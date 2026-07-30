@@ -17,12 +17,12 @@
                 <div class="d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">{% trans "Détails de Production" %}</h5>
                     <div>
-                        {% if user.profile.role.name in 'admin,manager,agronomist' or user.is_superuser %}
+                        {% if user.role in 'admin,manager,agronomist' or user.is_superuser %}
                         <a href="{% url 'cooperatives:production_record_edit' object.unique_id %}" class="btn btn-falcon-primary btn-sm">
                             <span class="fas fa-edit me-1"></span>{% trans "Modifier" %}
                         </a>
                         {% endif %}
-                        {% if user.profile.role.name in 'admin,manager' or user.is_superuser %}
+                        {% if user.role in 'admin,manager' or user.is_superuser %}
                         <a href="{% url 'cooperatives:production_record_delete' object.unique_id %}" class="btn btn-danger btn-sm">
                             <span class="fas fa-trash me-1"></span>{% trans "Supprimer" %}
                         </a>
@@ -73,8 +73,8 @@
             <div class="card-header bg-light">
                 <div class="d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">{% trans "Questionnaires Associés" %}</h5>
-                    {% if user.profile.role.name in 'admin,regional_officer,manager' or user.is_superuser %}
-                    <a href="{% url 'questionnaires:submit_questionnaire' %}?target_model=production&target_id={{ object.unique_id }}" class="btn btn-falcon-primary btn-sm">
+                    {% if user.role in 'admin,regional_officer,manager' or user.is_superuser %}
+                    <a href="{% url 'questionnaires:questionnaire_list' %}?target_model=production&target_id={{ object.unique_id }}" class="btn btn-falcon-primary btn-sm">
                         <span class="fas fa-plus me-1"></span>{% trans "Nouveau Questionnaire" %}
                     </a>
                     {% endif %}

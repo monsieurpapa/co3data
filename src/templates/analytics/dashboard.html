@@ -2,7 +2,7 @@
 {% extends "base.html" %}
 {% load i18n %}
 
-{% block title %}{% trans "Dashboard" %} – CoopData{% endblock %}
+{% block title %}{% trans "Dashboard" %} – CO3DATA{% endblock %}
 
 {% block breadcrumb %}
 <li class="breadcrumb-item active">{% trans "Dashboard" %}</li>
@@ -18,7 +18,7 @@
 <div class="row g-3 mb-4">
   <div class="col-6 col-md-3">
     <div class="card kpi-card neutral h-100 p-3">
-      <div class="text-muted small mb-1"><i class="bi bi-building me-1"></i>{% trans "Active Cooperatives" %}</div>
+      <div class="text-muted small mb-1"><i class="bi bi-building me-1"></i>{% trans "Cooperatives" %}</div>
       <div class="kpi-value text-primary">{{ total_cooperatives }}</div>
     </div>
   </div>
@@ -33,40 +33,24 @@
     </div>
   </div>
   <div class="col-6 col-md-3">
-    <div class="card kpi-card {% if avg_delinquency_rate and avg_delinquency_rate > 0.1 %}red{% elif avg_delinquency_rate and avg_delinquency_rate > 0.05 %}amber{% else %}green{% endif %} h-100 p-3">
-      <div class="text-muted small mb-1"><i class="bi bi-exclamation-circle me-1"></i>{% trans "Avg. PAR30 (Delinquency)" %}</div>
-      <div class="kpi-value">
-        {% if avg_delinquency_rate %}{{ avg_delinquency_rate|floatformat:1 }}%{% else %}–{% endif %}
-      </div>
-      <div class="small text-muted mt-1">{% trans "Avg across cooperatives" %}</div>
+    <div class="card kpi-card green h-100 p-3">
+      <div class="text-muted small mb-1"><i class="bi bi-graph-up me-1"></i>{% trans "Avg. Yield" %}</div>
+      <div class="kpi-value">{{ avg_yield|floatformat:1 }} <span class="fs--1 text-muted">kg/ha</span></div>
+      <div class="small text-muted mt-1">{% trans "Across cooperatives" %}</div>
     </div>
   </div>
   <div class="col-6 col-md-3">
-    <div class="card kpi-card {% if avg_oss and avg_oss >= 1.0 %}green{% elif avg_oss and avg_oss >= 0.8 %}amber{% else %}red{% endif %} h-100 p-3">
-      <div class="text-muted small mb-1"><i class="bi bi-check-circle me-1"></i>{% trans "Avg. Self-Sufficiency" %}</div>
-      <div class="kpi-value">
-        {% if avg_oss %}{{ avg_oss|floatformat:0 }}%{% else %}–{% endif %}
-      </div>
-      <div class="small text-muted mt-1">{% trans "Operational Self-Sufficiency" %}</div>
+    <div class="card kpi-card neutral h-100 p-3">
+      <div class="text-muted small mb-1"><i class="bi bi-basket me-1"></i>{% trans "Cherry Volume (this month)" %}</div>
+      <div class="kpi-value">{{ cherry_kg_this_month|floatformat:0 }} <span class="fs--1 text-muted">kg</span></div>
+      <div class="small text-muted mt-1">{{ cherry_value_fc_this_month|floatformat:0 }} FC</div>
     </div>
   </div>
 </div>
 
-{# ── Second row: Liquidity, Capital, Alerts, Conflicts ───────────────────── #}
+{# ── Second row: Alerts, Conflicts, Submissions ──────────────────────────── #}
 <div class="row g-3 mb-4">
-  <div class="col-6 col-md-3">
-    <div class="card kpi-card {% if avg_liquidity_ratio and avg_liquidity_ratio >= 0.15 %}green{% elif avg_liquidity_ratio and avg_liquidity_ratio >= 0.1 %}amber{% else %}red{% endif %} h-100 p-3">
-      <div class="text-muted small mb-1"><i class="bi bi-droplet-half me-1"></i>{% trans "Avg. Liquidity Ratio" %}</div>
-      <div class="kpi-value">{% if avg_liquidity_ratio %}{{ avg_liquidity_ratio|floatformat:1 }}%{% else %}–{% endif %}</div>
-    </div>
-  </div>
-  <div class="col-6 col-md-3">
-    <div class="card kpi-card {% if avg_capital_adequacy and avg_capital_adequacy >= 0.1 %}green{% elif avg_capital_adequacy and avg_capital_adequacy >= 0.06 %}amber{% else %}red{% endif %} h-100 p-3">
-      <div class="text-muted small mb-1"><i class="bi bi-shield me-1"></i>{% trans "Avg. Capital Adequacy" %}</div>
-      <div class="kpi-value">{% if avg_capital_adequacy %}{{ avg_capital_adequacy|floatformat:1 }}%{% else %}–{% endif %}</div>
-    </div>
-  </div>
-  <div class="col-6 col-md-3">
+  <div class="col-6 col-md-4">
     <div class="card kpi-card {% if open_alert_count > 0 %}amber{% else %}green{% endif %} h-100 p-3">
       <div class="text-muted small mb-1"><i class="bi bi-bell me-1"></i>{% trans "Open Data Alerts" %}</div>
       <div class="kpi-value text-warning">{{ open_alert_count }}</div>
@@ -75,25 +59,31 @@
       {% endif %}
     </div>
   </div>
-  <div class="col-6 col-md-3">
+  <div class="col-6 col-md-4">
     <div class="card kpi-card {% if pending_conflicts > 0 %}amber{% else %}neutral{% endif %} h-100 p-3">
       <div class="text-muted small mb-1"><i class="bi bi-arrow-left-right me-1"></i>{% trans "Sync Conflicts" %}</div>
       <div class="kpi-value">{{ pending_conflicts }}</div>
       <div class="small text-muted">{% trans "Pending resolution" %}</div>
     </div>
   </div>
+  <div class="col-6 col-md-4">
+    <div class="card kpi-card neutral h-100 p-3">
+      <div class="text-muted small mb-1"><i class="bi bi-ui-checks me-1"></i>{% trans "Questionnaire Submissions" %}</div>
+      <div class="kpi-value">{{ total_submissions }}</div>
+    </div>
+  </div>
 </div>
 
 {# ── Charts row ──────────────────────────────────────────────────────────── #}
 <div class="row g-4 mb-4">
-  {# KPI Trend Line #}
+  {# Cherry delivery trend #}
   <div class="col-md-8">
     <div class="card border-0 shadow-sm p-3">
       <div class="d-flex justify-content-between mb-2">
-        <h6 class="mb-0 fw-semibold">{% trans "KPI Trends (Quarterly)" %}</h6>
+        <h6 class="mb-0 fw-semibold">{% trans "Cherry Deliveries (last 6 months)" %}</h6>
         <a href="{% url 'analytics:chart_kpi_trend' %}" class="small text-muted" target="_blank">JSON</a>
       </div>
-      <canvas id="kpiTrendChart" height="80"></canvas>
+      <canvas id="deliveryTrendChart" height="80"></canvas>
     </div>
   </div>
   {# Demographics donut #}
@@ -150,7 +140,29 @@
   </div>
 </div>
 
-{# Recent audit log (admin only) #}
+{# ── Recent deliveries ───────────────────────────────────────────────────── #}
+{% if recent_deliveries %}
+<div class="card border-0 shadow-sm p-3 mt-4">
+  <div class="d-flex justify-content-between mb-2">
+    <h6 class="fw-semibold mb-0">{% trans "Recent Cherry Deliveries" %}</h6>
+    <a href="{% url 'cooperatives:cherry_delivery_list' %}" class="small">{% trans "View all" %}</a>
+  </div>
+  <table class="table table-sm table-hover mb-0">
+    <tbody>
+      {% for d in recent_deliveries %}
+      <tr>
+        <td class="text-muted small">{{ d.purchase_date }}</td>
+        <td>{{ d.member }}</td>
+        <td>{{ d.station }}</td>
+        <td class="text-end">{{ d.quantity_kg }} kg</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{# Recent audit log (admin/government/apex only) #}
 {% if recent_audits %}
 <div class="card border-0 shadow-sm p-3 mt-4">
   <div class="d-flex justify-content-between mb-2">
@@ -176,21 +188,26 @@
 
 {% block extra_scripts %}
 <script>
-// KPI Trend chart
+// Cherry delivery trend chart
 (async () => {
   const res = await fetch("{% url 'analytics:chart_kpi_trend' %}");
   const d = await res.json();
-  new Chart(document.getElementById('kpiTrendChart'), {
+  new Chart(document.getElementById('deliveryTrendChart'), {
     type: 'line',
     data: {
       labels: d.labels,
       datasets: [
-        { label: '{% trans "PAR30 %" %}', data: d.delinquency, borderColor: '#E74C3C', tension: .4, fill: false },
-        { label: '{% trans "Liquidity %" %}', data: d.liquidity, borderColor: '#27AE60', tension: .4, fill: false },
-        { label: '{% trans "Capital Adequacy %" %}', data: d.capital, borderColor: '#2E86C1', tension: .4, fill: false },
+        { label: '{% trans "Volume (kg)" %}', data: d.volume_kg, borderColor: '#27AE60', tension: .4, fill: false, yAxisID: 'y' },
+        { label: '{% trans "Value (FC)" %}', data: d.value_fc, borderColor: '#2E86C1', tension: .4, fill: false, yAxisID: 'y1' },
       ]
     },
-    options: { plugins: { legend: { position: 'bottom' } }, scales: { y: { beginAtZero: true } } }
+    options: {
+      plugins: { legend: { position: 'bottom' } },
+      scales: {
+        y: { beginAtZero: true, position: 'left', title: { display: true, text: 'kg' } },
+        y1: { beginAtZero: true, position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'FC' } },
+      }
+    }
   });
 })();
 

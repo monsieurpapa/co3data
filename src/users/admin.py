@@ -14,21 +14,20 @@ class RegionAdmin(admin.ModelAdmin):
 
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
-    list_display = ("username", "get_full_name", "role", "region", "preferred_language", "is_2fa_enrolled", "is_active")
-    list_filter = ("role", "region", "preferred_language", "is_youth", "is_marginalized", "is_active")
+    list_display = ("username", "get_full_name", "role", "region", "cooperative", "preferred_language", "is_2fa_enrolled", "is_active")
+    list_filter = ("role", "region", "preferred_language", "is_active")
     search_fields = ("username", "first_name", "last_name", "email")
     fieldsets = BaseUserAdmin.fieldsets + (
         (_("CoopData Profile"), {
             "fields": (
-                "role", "region", "phone_number", "preferred_language",
-                "is_youth", "is_marginalized",
+                "role", "region", "cooperative", "phone_number", "preferred_language", "profile_picture",
                 "is_2fa_enrolled", "last_login_ip", "force_password_change",
             )
         }),
     )
     add_fieldsets = BaseUserAdmin.add_fieldsets + (
         (_("CoopData Profile"), {
-            "fields": ("role", "region", "phone_number", "preferred_language")
+            "fields": ("role", "region", "cooperative", "phone_number", "preferred_language")
         }),
     )
 

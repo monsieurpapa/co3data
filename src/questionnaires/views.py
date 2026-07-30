@@ -5,7 +5,7 @@ from django.contrib.contenttypes.models import ContentType
 from core.mixins import RoleRequiredMixin, RegionalAccessMixin
 from .models import Questionnaire, Submission, Answer
 from .forms import QuestionnaireSubmissionForm, QuestionFormSet
-from cooperatives.models import Cooperative, Member
+from cooperatives.models import Cooperative, FinancialRecord, Member, ProductionRecord
 from users.models import User
 
 class QuestionnaireListView(RoleRequiredMixin, ListView):
@@ -102,12 +102,11 @@ class QuestionnaireSubmissionView(RoleRequiredMixin, FormView):
                 return get_object_or_404(Member, unique_id=target_id)
             elif questionnaire.target_model == 'user':
                 return get_object_or_404(User, unique_id=target_id)
-            # elif questionnaire.target_model == 'financial_record':
-            #     return get_object_or_404(FinancialRecord, unique_id=target_id)
-            # elif questionnaire.target_model == 'production':
-            #     return get_object_or_404(ProductionRecord, unique_id=target_id)
-            pass
-        except:
+            elif questionnaire.target_model == 'financial_record':
+                return get_object_or_404(FinancialRecord, unique_id=target_id)
+            elif questionnaire.target_model == 'production':
+                return get_object_or_404(ProductionRecord, unique_id=target_id)
+        except Exception:
             return None
         return None
 
@@ -157,13 +156,7 @@ class SubmissionListView(RegionalAccessMixin, RoleRequiredMixin, ListView):
     template_name = 'questionnaires/submission_list.html'
     context_object_name = 'submissions'
     required_roles = ['manager', 'regional_officer', 'admin']
-
-    def get_queryset(self):
-        qs = super().get_queryset()
-        user = self.request.user
-        if not user.is_superuser and user.region:
-            return qs.filter(submitted_by__region=user.region)
-        return qs
+    region_field = 'submitted_by__region'
 
 class SubmissionDetailView(RegionalAccessMixin, RoleRequiredMixin, DetailView):
     model = Submission
@@ -172,3 +165,4 @@ class SubmissionDetailView(RegionalAccessMixin, RoleRequiredMixin, DetailView):
     required_roles = ['manager', 'regional_officer', 'admin']
     slug_field = 'unique_id'
     slug_url_kwarg = 'uuid'
+    region_field = 'submitted_by__region'

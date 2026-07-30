@@ -1,7 +1,12 @@
-from django.db.models import Avg, Sum, Count
-from cooperatives.models import Member
-from .models import KPI, DataValidationRule, DataQualityAlert
+import logging
+
+from django.db.models import Count, Q, Sum
 from simpleeval import simple_eval
+
+from .models import DataQualityAlert, DataValidationRule
+
+logger = logging.getLogger(__name__)
+
 
 class KPIService:
     """Service for calculating Key Performance Indicators."""
@@ -9,7 +14,6 @@ class KPIService:
     @staticmethod
     def get_cooperatives_with_youth_data(queryset):
         """Returns cooperative queryset annotated with total_members and youth_members counts."""
-        from django.db.models import Count, Q
         return queryset.annotate(
             total_members_count=Count('members', distinct=True),
             youth_members_count=Count('members', filter=Q(members__age_group='youth'), distinct=True)
@@ -17,81 +21,88 @@ class KPIService:
 
     @staticmethod
     def get_cooperatives_with_yield_data(queryset):
-        """
-        [STUBBED] Legacy yield data calculation.
-        Original logic relied on ProductionRecord and Farm models which are removed.
-        """
-        from django.db.models import Value
+        """Returns cooperative queryset annotated with total production (kg) and farm area (ha)."""
         return queryset.annotate(
-            total_production_kg=Value(0.0),
-            total_farm_size_ha=Value(0.0)
+            total_production_kg=Sum('members__production_records__quantity_kg'),
+            total_farm_size_ha=Sum('members__farms__size_hectares'),
         )
+
+
+def _resolve_cooperative(record):
+    """Best-effort lookup of the Cooperative a record belongs to, for alert scoping."""
+    cooperative = getattr(record, 'cooperative', None)
+    if cooperative:
+        return cooperative
+    if record._meta.model_name == 'cooperative':
+        return record
+    member = getattr(record, 'member', None) or getattr(getattr(record, 'farm', None), 'member', None)
+    if member:
+        return member.cooperative
+    return None
+
 
 class ValidationService:
     """Service for executing dynamic data validation rules."""
+
+    @staticmethod
+    def _apply_result(rule, record_id, cooperative, is_valid, message):
+        if not is_valid:
+            DataQualityAlert.objects.get_or_create(
+                rule=rule,
+                content_type_label=rule.applies_to_model,
+                record_id=record_id,
+                is_resolved=False,
+                defaults={
+                    "cooperative_id": cooperative.pk if cooperative else 0,
+                    "field_name": rule.applies_to_field or "",
+                    "message": message,
+                },
+            )
+        else:
+            DataQualityAlert.objects.filter(
+                rule=rule,
+                content_type_label=rule.applies_to_model,
+                record_id=record_id,
+                is_resolved=False,
+            ).update(is_resolved=True)
 
     @staticmethod
     def validate_record(record):
         """Validates a model instance against active rules."""
         model_name = f"{record._meta.app_label}.{record._meta.object_name}"
         rules = DataValidationRule.objects.filter(applies_to_model=model_name, is_active=True)
-        
-        # Determine the cooperative association
-        cooperative = getattr(record, 'cooperative', None)
-        if not cooperative and record._meta.model_name == 'cooperative':
-            cooperative = record
+        if not rules:
+            return
+
+        cooperative = _resolve_cooperative(record)
 
         for rule in rules:
             try:
-                # Simple evaluation context
                 context = {
-                    'record': record, 
-                    'value': getattr(record, rule.applies_to_field) if rule.applies_to_field else None
+                    'record': record,
+                    'value': getattr(record, rule.applies_to_field) if rule.applies_to_field else None,
                 }
-                
-                # If validation fails
                 try:
                     is_valid = simple_eval(rule.rule_expression, names=context)
                 except Exception as eval_err:
-                    import logging
-                    logger = logging.getLogger(__name__)
                     logger.error(f"Rule '{rule.name}' evaluation error: {eval_err}")
                     is_valid = False
 
-                if not is_valid:
-                    # Check for existing unresolved alert for this record/rule
-                    alert, created = DataQualityAlert.objects.get_or_create(
-                        rule=rule,
-                        cooperative=cooperative,
-                        record_id=record.id,
-                        is_resolved=False,
-                        defaults={'message': f"Validation failed: {rule.name}"}
-                    )
-                else:
-                    # Validation passed - resolve any existing alerts for this record/rule
-                    DataQualityAlert.objects.filter(
-                        rule=rule, 
-                        record_id=record.id, 
-                        is_resolved=False
-                    ).update(is_resolved=True)
-                    
+                ValidationService._apply_result(
+                    rule, record.id, cooperative, is_valid, f"Validation failed: {rule.name}"
+                )
             except Exception as e:
-                # Log error but don't break the save process
-                import logging
-                logger = logging.getLogger(__name__)
                 logger.error(f"Error evaluating rule {rule.id} on {model_name} {record.id}: {e}")
 
     @staticmethod
     def validate_submission(submission):
         """Validates a questionnaire submission and its answers."""
-        from questionnaires.models import Answer
         rules = DataValidationRule.objects.filter(applies_to_model='questionnaires.Submission', is_active=True)
-        
-        # Build answer map for easy access in rules
+        if not rules:
+            return
+
         answers = {}
         for answer in submission.answers.all():
-            # Use question text/id or a slug as key if possible
-            # For now, we use a simple key based on question ID
             key = f"q_{answer.question.id}"
             if answer.value_text:
                 answers[key] = answer.value_text
@@ -102,42 +113,20 @@ class ValidationService:
             elif answer.value_boolean is not None:
                 answers[key] = answer.value_boolean
 
-        # Get cooperative from target object
         target = submission.content_object
-        cooperative = getattr(target, 'cooperative', None)
-        if not cooperative and hasattr(target, 'name') and target._meta.model_name == 'cooperative':
-            cooperative = target
+        cooperative = _resolve_cooperative(target) if target is not None else None
 
         for rule in rules:
             try:
-                context = {
-                    'submission': submission,
-                    'answers': answers,
-                }
-                
+                context = {'submission': submission, 'answers': answers}
                 try:
                     is_valid = simple_eval(rule.rule_expression, names=context)
                 except Exception as eval_err:
-                    import logging
-                    logger = logging.getLogger(__name__)
                     logger.error(f"Questionnaire Rule '{rule.name}' evaluation error: {eval_err}")
                     is_valid = False
 
-                if not is_valid:
-                    DataQualityAlert.objects.get_or_create(
-                        rule=rule,
-                        cooperative=cooperative,
-                        record_id=submission.id,
-                        is_resolved=False,
-                        defaults={'message': f"Questionnaire Validation failed: {rule.name}"}
-                    )
-                else:
-                    DataQualityAlert.objects.filter(
-                        rule=rule,
-                        record_id=submission.id,
-                        is_resolved=False
-                    ).update(is_resolved=True)
+                ValidationService._apply_result(
+                    rule, submission.id, cooperative, is_valid, f"Questionnaire validation failed: {rule.name}"
+                )
             except Exception as e:
-                import logging
-                logger = logging.getLogger(__name__)
                 logger.error(f"Error evaluating submission rule {rule.id} on {submission.id}: {e}")

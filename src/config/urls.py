@@ -3,7 +3,15 @@ from django.urls import include, path
 from django.conf import settings
 from django.conf.urls.i18n import i18n_patterns
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-from config.views import health_check
+from config.views import (
+    health_check,
+    custom_permission_denied,
+    custom_page_not_found,
+    custom_server_error,
+    error_page_403,
+    error_page_404,
+    error_page_500,
+)
 
 urlpatterns = [
     path("i18n/", include("django.conf.urls.i18n")),
@@ -25,9 +33,17 @@ urlpatterns += [
     path("api/sync/", include("sync.urls", namespace="sync")),
     path("api-auth/", include("rest_framework.urls")),
     path("health/", health_check, name="health_check"),
+    # Error page URLs, for testing/direct access; handlers below are used when errors actually occur.
+    path("error/404/", error_page_404),
+    path("error/403/", error_page_403),
+    path("error/500/", error_page_500),
     # path("account/", include(("two_factor.urls", "two_factor"))),
 ]
 
 if settings.DEBUG:
     from django.conf.urls.static import static
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+handler403 = custom_permission_denied
+handler404 = custom_page_not_found
+handler500 = custom_server_error

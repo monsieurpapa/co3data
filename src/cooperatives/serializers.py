@@ -1,60 +1,51 @@
-# src/cooperatives/serializers.py
 from rest_framework import serializers
-from .models import Cooperative, Member, SACCOFinancialSummary, LoanAccount, SavingsAccount
-
+from .models import (
+    Cooperative, Member, Farm, ProductionRecord,
+    WashingStation, FinancialRecord, Buyer,
+    CooperativeCertificate, CooperativeSale
+)
 
 class CooperativeSerializer(serializers.ModelSerializer):
-    region_name = serializers.CharField(source="region.name", read_only=True)
-
     class Meta:
         model = Cooperative
-        fields = [
-            "id", "name", "registration_number", "type", "status",
-            "sector", "region", "region_name", "physical_address",
-            "phone", "email", "establishment_date",
-            "mambu_encoded_key", "updated_at",
-        ]
+        fields = '__all__'
 
+class WashingStationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = WashingStation
+        fields = '__all__'
 
 class MemberSerializer(serializers.ModelSerializer):
-    cooperative_name = serializers.CharField(source="cooperative.name", read_only=True)
-
     class Meta:
         model = Member
-        fields = [
-            "id", "cooperative", "cooperative_name",
-            "first_name", "last_name", "member_id", "national_id",
-            "date_of_birth", "gender", "age_group",
-            "is_youth", "is_marginalized", "is_board_member",
-            "phone_number", "email", "date_joined", "is_active",
-        ]
+        fields = '__all__'
 
-
-class SACCOFinancialSummarySerializer(serializers.ModelSerializer):
+class FarmSerializer(serializers.ModelSerializer):
     class Meta:
-        model = SACCOFinancialSummary
-        fields = "__all__"
-        read_only_fields = [
-            "submitted_by", "submitted_at", "is_verified", "verified_by",
-            "kpi_delinquency_rate", "kpi_liquidity_ratio", "kpi_capital_adequacy",
-            "kpi_roa", "kpi_cost_per_borrower", "kpi_portfolio_yield",
-            "kpi_operational_self_sufficiency",
-            "kpi_youth_participation_rate", "kpi_female_participation_rate",
-        ]
+        model = Farm
+        fields = '__all__'
 
-
-class LoanAccountSerializer(serializers.ModelSerializer):
-    member_name = serializers.SerializerMethodField()
-
+class ProductionRecordSerializer(serializers.ModelSerializer):
     class Meta:
-        model = LoanAccount
-        fields = "__all__"
+        model = ProductionRecord
+        fields = '__all__'
 
-    def get_member_name(self, obj):
-        return f"{obj.member.first_name} {obj.member.last_name}"
-
-
-class SavingsAccountSerializer(serializers.ModelSerializer):
+class FinancialRecordSerializer(serializers.ModelSerializer):
     class Meta:
-        model = SavingsAccount
-        fields = "__all__"
+        model = FinancialRecord
+        fields = '__all__'
+
+class BuyerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Buyer
+        fields = '__all__'
+
+class CooperativeCertificateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CooperativeCertificate
+        fields = '__all__'
+
+class CooperativeSaleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CooperativeSale
+        fields = '__all__'

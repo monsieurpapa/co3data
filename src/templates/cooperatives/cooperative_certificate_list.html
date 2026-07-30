@@ -16,7 +16,7 @@
             <h5 class="mb-0">{% trans "Certificats" %}</h5>
             <small class="text-600">{{ cooperative.name }}</small>
         </div>
-        {% if user.profile.role.name in 'admin,regional_officer,manager' or user.is_superuser %}
+        {% if user.role in 'admin,regional_officer,manager' or user.is_superuser %}
         <a href="{% url 'cooperatives:cooperative_certificate_add' cooperative.unique_id %}" class="btn btn-falcon-primary btn-sm">
             <span class="fas fa-plus me-1"></span>{% trans "Nouveau Certificat" %}
         </a>

@@ -1,40 +1,20 @@
-# src/users/models.py
-# ─────────────────────────────────────────────────────────────────────────────
-# CoopData – User & Region models
-# Aligned with DGRV / MCIT Eswatini TOR (SUCOSA II)
-# Changes vs original:
-#   • USER_ROLES updated to reflect Eswatini stakeholder hierarchy
-#     (MCIT, Federation, Apex, SACCO, Regional Officer, Field Agent, Admin)
-#   • Added AuditLog model (TOR §3.3 – audit trails)
-#   • Added is_2fa_required flag per role (TOR §4 – 2FA for admins)
-#   • Added preferred_language field (TOR §3.3 – multilingual)
-#   • Added is_marginalized flag for inclusion tracking (TOR §3.1)
-#   • Region now carries country ISO code for future multi-country expansion
-# ─────────────────────────────────────────────────────────────────────────────
+import uuid
 
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils.translation import gettext_lazy as _
-import uuid
+
 
 class Region(models.Model):
-    """
-    Geographical region / inkhundla.
-    Supports multi-country expansion (Eswatini, Mozambique, etc.)
-    """
-    unique_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, db_index=True)
-    name = models.CharField(max_length=100)
-    # ISO 3166-1 alpha-2: SZ = Eswatini, MZ = Mozambique, ZA = South Africa
-    country_code = models.CharField(
-        max_length=2,
-        default="SZ",
-        help_text=_("ISO 3166-1 alpha-2 country code"),
-    )
+    name = models.CharField(max_length=100, unique=True)
+    # ISO 3166-1 alpha-2 country code. Default "CD" = Democratic Republic of Congo.
+    country_code = models.CharField(max_length=2, default="CD", help_text=_("ISO 3166-1 alpha-2 country code"))
     description = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True, null=True)
 
     class Meta:
-        verbose_name = _("Region")
-        verbose_name_plural = _("Regions")
+        verbose_name = _("Région")
+        verbose_name_plural = _("Régions")
         unique_together = ("name", "country_code")
         ordering = ["country_code", "name"]
 
@@ -43,115 +23,98 @@ class Region(models.Model):
 
 
 class User(AbstractUser):
-    """
-    Custom user model.  Role hierarchy matches the Eswatini cooperative
-    ecosystem: MCIT > Federation > Apex Body > Regional Officer >
-    SACCO Manager > Field Agent > Member.
+    unique_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, db_index=True)
 
-    TOR §3.3 – multi-level, role-based access.
-    TOR §4   – 2FA mandatory for admin and government roles.
-    """
-
-    # ── Role choices ──────────────────────────────────────────────────────────
-    ROLE_SYSTEM_ADMIN = "system_admin"
-    ROLE_GOVERNMENT = "government"          # MCIT officials
-    ROLE_APEX_BODY = "apex_body"            # National Federation / Apex
+    ROLE_MEMBER = "member"
+    ROLE_FIELD_AGENT = "field_agent"
+    ROLE_MANAGER = "manager"
     ROLE_REGIONAL_OFFICER = "regional_officer"
-    ROLE_SACCO_MANAGER = "sacco_manager"   # Cooperative/SACCO manager
-    ROLE_FIELD_AGENT = "field_agent"        # Data entry in the field
-    ROLE_MEMBER = "member"                  # Cooperative member (read-only)
-    ROLE_AUDITOR = "auditor"                # External auditor (read-only)
+    ROLE_APEX_BODY = "apex_body"
+    ROLE_GOVERNMENT = "government"
+    ROLE_ADMIN = "admin"
 
     USER_ROLES = (
-        (ROLE_SYSTEM_ADMIN, _("System Administrator")),
-        (ROLE_GOVERNMENT, _("Government Official (MCIT)")),
-        (ROLE_APEX_BODY, _("Apex Body / Federation Representative")),
-        (ROLE_REGIONAL_OFFICER, _("Regional Officer")),
-        (ROLE_SACCO_MANAGER, _("SACCO / Cooperative Manager")),
-        (ROLE_FIELD_AGENT, _("Field Agent / Data Collector")),
         (ROLE_MEMBER, _("Cooperative Member")),
-        (ROLE_AUDITOR, _("Auditor (Read-Only)")),
+        (ROLE_FIELD_AGENT, _("Field Agent")),
+        (ROLE_MANAGER, _("Cooperative Manager")),
+        (ROLE_REGIONAL_OFFICER, _("Regional Officer")),
+        (ROLE_APEX_BODY, _("Apex Body Representative")),
+        (ROLE_GOVERNMENT, _("Government Official")),
+        (ROLE_ADMIN, _("System Administrator")),
     )
 
-    # Roles that MUST have 2FA enabled (TOR §4)
-    ROLES_REQUIRING_2FA = {ROLE_SYSTEM_ADMIN, ROLE_GOVERNMENT, ROLE_APEX_BODY}
+    ROLE_PERMISSIONS = {
+        ROLE_MEMBER:           ["view_own_data"],
+        ROLE_FIELD_AGENT:      ["view_cooperative", "add_member", "add_productionrecord", "add_submission"],
+        ROLE_MANAGER:          ["view_cooperative", "add_member", "change_member",
+                                 "add_productionrecord", "add_financialrecord", "view_reports"],
+        ROLE_REGIONAL_OFFICER: ["view_region", "view_reports", "export_data"],
+        ROLE_APEX_BODY:        ["view_all", "view_reports", "export_data"],
+        ROLE_GOVERNMENT:       ["view_all", "view_reports", "export_data"],
+        ROLE_ADMIN:            ["all"],
+    }
 
-    # ── Language choices (TOR §3.3) ───────────────────────────────────────────
-    LANG_ENGLISH = "en"
-    LANG_SISWATI = "ss"
-    LANG_PORTUGUESE = "pt"
+    # Roles that must have 2FA enabled.
+    ROLES_REQUIRING_2FA = {ROLE_ADMIN, ROLE_GOVERNMENT, ROLE_APEX_BODY}
 
     LANGUAGE_CHOICES = (
-        (LANG_ENGLISH, _("English")),
-        (LANG_SISWATI, _("SiSwati")),
-        (LANG_PORTUGUESE, _("Portuguese")),
+        ("fr", _("Français")),
+        ("sw", _("Kiswahili")),
+        ("en", _("English")),
     )
 
-    # ── Fields ────────────────────────────────────────────────────────────────
-    role = models.CharField(
-        max_length=25,
-        choices=USER_ROLES,
-        default=ROLE_MEMBER,
-        db_index=True,
-    )
+    role = models.CharField(max_length=20, choices=USER_ROLES, default=ROLE_MEMBER, db_index=True)
     phone_number = models.CharField(max_length=20, blank=True, null=True)
-    region = models.ForeignKey(
-        Region,
+    region = models.ForeignKey(Region, on_delete=models.SET_NULL, null=True, blank=True, related_name="users")
+    cooperative = models.ForeignKey(
+        "cooperatives.Cooperative",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name="users",
+        related_name="staff_users",
     )
-    preferred_language = models.CharField(
-        max_length=2,
-        choices=LANGUAGE_CHOICES,
-        default=LANG_ENGLISH,
-        help_text=_("Interface language preference"),
-    )
-    # Inclusion tracking (TOR §3.1 – mandatory coding for marginalized groups)
-    is_youth = models.BooleanField(
-        default=False,
-        help_text=_("Flag if user/member is aged 18-35"),
-    )
-    is_marginalized = models.BooleanField(
-        default=False,
-        help_text=_("Flag for inclusion-based programmes (TOR §3.1)"),
-    )
+    preferred_language = models.CharField(max_length=5, choices=LANGUAGE_CHOICES, default="fr", blank=True)
+    last_sync_at = models.DateTimeField(null=True, blank=True)
+    profile_picture = models.ImageField(upload_to="profiles/", null=True, blank=True)
+
     # Security
-    is_2fa_enrolled = models.BooleanField(
-        default=False,
-        help_text=_("True once the user has completed 2FA setup"),
-    )
+    is_2fa_enrolled = models.BooleanField(default=False, help_text=_("True once the user has completed 2FA setup"))
     last_login_ip = models.GenericIPAddressField(blank=True, null=True)
-    force_password_change = models.BooleanField(
-        default=False,
-        help_text=_("Force user to change password on next login"),
-    )
+    force_password_change = models.BooleanField(default=False, help_text=_("Force user to change password on next login"))
+
+    created_at = models.DateTimeField(auto_now_add=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True, null=True)
 
     class Meta:
         verbose_name = _("User")
         verbose_name_plural = _("Users")
 
     def __str__(self):
-        return f"{self.get_full_name() or self.username} [{self.get_role_display()}]"
+        return f"{self.get_full_name() or self.username} ({self.get_role_display()})"
 
     @property
     def requires_2fa(self) -> bool:
-        """Returns True if this role mandates 2FA (TOR §4)."""
         return self.role in self.ROLES_REQUIRING_2FA
 
+    def can(self, permission: str) -> bool:
+        role_perms = self.ROLE_PERMISSIONS.get(self.role, [])
+        return "all" in role_perms or permission in role_perms
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Audit Trail (TOR §3.3 – user and access management with audit trails)
-# ─────────────────────────────────────────────────────────────────────────────
+    def get_accessible_cooperatives(self):
+        from cooperatives.models import Cooperative
+        if self.is_superuser or self.can("view_all"):
+            return Cooperative.objects.all()
+        if self.can("view_region") and self.region:
+            return Cooperative.objects.filter(region=self.region)
+        if self.cooperative:
+            return Cooperative.objects.filter(pk=self.cooperative.pk)
+        return Cooperative.objects.none()
+
 
 class AuditLog(models.Model):
     """
-    Immutable record of every create / update / delete action performed
-    by any user.  Satisfies TOR §3.3 audit trail and §4 access logs.
-
-    Consider using django-simple-history for automatic per-model history;
-    this model captures higher-level events (login, export, role changes).
+    Immutable record of significant actions performed by any user.
+    Canonical audit trail for the project (core.AuditLog was a duplicate and has been removed).
     """
 
     ACTION_LOGIN = "login"
@@ -175,24 +138,14 @@ class AuditLog(models.Model):
     )
 
     unique_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, db_index=True)
-    user = models.ForeignKey(
-        User,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="audit_logs",
-    )
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="audit_logs")
     action = models.CharField(max_length=20, choices=ACTION_CHOICES, db_index=True)
-    # Human-readable description
     description = models.TextField(blank=True)
-    # The affected model / object (optional)
     content_type_label = models.CharField(max_length=100, blank=True)
     object_id = models.CharField(max_length=50, blank=True)
-    # Request metadata
     ip_address = models.GenericIPAddressField(blank=True, null=True)
     user_agent = models.TextField(blank=True)
     timestamp = models.DateTimeField(auto_now_add=True, db_index=True)
-    # For sensitive changes, store a before/after snapshot
     before_state = models.JSONField(blank=True, null=True)
     after_state = models.JSONField(blank=True, null=True)
 
@@ -200,7 +153,6 @@ class AuditLog(models.Model):
         verbose_name = _("Audit Log")
         verbose_name_plural = _("Audit Logs")
         ordering = ["-timestamp"]
-        # Audit logs must never be editable — enforce at DB level if possible
         default_permissions = ("view",)
 
     def __str__(self):

@@ -1,55 +1,68 @@
 # src/cooperatives/views.py
-# ─────────────────────────────────────────────────────────────────────────────
-# CoopData – Cooperative module views (Eswatini / SUCOSA II)
-# ─────────────────────────────────────────────────────────────────────────────
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db.models import Avg, Count, Q, Sum
-from django.shortcuts import get_object_or_404, redirect
+from django.contrib.contenttypes.models import ContentType
+from django.core.paginator import Paginator
+from django.db.models import Q, Sum
+from django.shortcuts import get_object_or_404
 from django.urls import reverse_lazy
-from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django.views.generic import (
     CreateView, DeleteView, DetailView, ListView, TemplateView, UpdateView,
 )
 
+from core.mixins import RegionalAccessMixin, RegionalFormMixin, RoleRequiredMixin
+from questionnaires.models import Questionnaire, Submission
 from users.models import AuditLog
 
 from .forms import (
-    BoardMemberForm,
+    BuyerForm,
+    CherryDeliveryForm,
+    CooperativeCertificateForm,
     CooperativeForm,
-    LoanAccountForm,
+    CooperativeSaleForm,
+    FinancialRecordForm,
     MemberForm,
-    SACCOFinancialSummaryForm,
-    SavingsAccountForm,
-    TrainingRecordForm,
+    ProductionRecordForm,
+    WashingStationForm,
 )
 from .models import (
-    BoardMember,
+    Buyer,
     Cooperative,
-    LoanAccount,
+    CooperativeCertificate,
+    CooperativeSale,
+    FinancialRecord,
     Member,
-    SACCOFinancialSummary,
-    SavingsAccount,
-    TrainingRecord,
+    ProductionRecord,
+    WashingStation,
 )
 
 
-# ── Role permission mixin ─────────────────────────────────────────────────────
-
-class RoleRequiredMixin(LoginRequiredMixin):
+def _scope_production_records_to_region(qs, user):
     """
-    Restrict view access to users with specific roles.
-    Set `allowed_roles` on the view class.
+    ProductionRecord has no direct region field: cherry deliveries reach a
+    cooperative via station/member, generic harvests via farm. Check all three.
     """
-    allowed_roles: list = []
+    if user.is_superuser:
+        return qs
+    if not getattr(user, "region", None):
+        return qs.none()
+    return qs.filter(
+        Q(farm__member__cooperative__region=user.region)
+        | Q(station__cooperative__region=user.region)
+        | Q(member__cooperative__region=user.region)
+    )
 
-    def dispatch(self, request, *args, **kwargs):
-        if request.user.is_authenticated and self.allowed_roles:
-            if request.user.role not in self.allowed_roles and not request.user.is_superuser:
-                messages.error(request, _("You do not have permission to perform this action."))
-                return redirect("cooperatives:cooperative_list")
-        return super().dispatch(request, *args, **kwargs)
+
+def _get_cooperative_for_region(user, uuid):
+    """Fetch a cooperative by uuid, scoped to the user's region (superusers see all)."""
+    qs = Cooperative.objects.all()
+    if not user.is_superuser:
+        if not getattr(user, "region", None):
+            qs = qs.none()
+        else:
+            qs = qs.filter(region=user.region)
+    return get_object_or_404(qs, unique_id=uuid)
 
 
 def _log(request, action, obj=None, before=None, after=None, description=""):
@@ -66,542 +79,743 @@ def _log(request, action, obj=None, before=None, after=None, description=""):
     )
 
 
-WRITE_ROLES = [
-    "system_admin", "regional_officer", "sacco_manager", "field_agent",
-]
-GOVERNMENT_ROLES = ["system_admin", "government", "apex_body", "regional_officer"]
-
-
 # ═════════════════════════════════════════════════════════════════════════════
-# COOPERATIVE
+# COOPERATIVES
 # ═════════════════════════════════════════════════════════════════════════════
 
-class CooperativeListView(LoginRequiredMixin, ListView):
+class CooperativeListView(RegionalAccessMixin, ListView):
     model = Cooperative
     template_name = "cooperatives/cooperative_list.html"
     context_object_name = "cooperatives"
-    paginate_by = 20
-
-    def get_queryset(self):
-        qs = Cooperative.objects.select_related("region", "contact_person").annotate(
-            member_count=Count("members", filter=Q(members__is_active=True))
-        )
-        q = self.request.GET.get("q", "").strip()
-        if q:
-            qs = qs.filter(Q(name__icontains=q) | Q(registration_number__icontains=q))
-        region = self.request.GET.get("region")
-        if region:
-            qs = qs.filter(region_id=region)
-        coop_type = self.request.GET.get("type")
-        if coop_type:
-            qs = qs.filter(type=coop_type)
-        status = self.request.GET.get("status")
-        if status:
-            qs = qs.filter(status=status)
-        # Regional officers see only their region
-        user = self.request.user
-        if user.role == "regional_officer" and user.region:
-            qs = qs.filter(region=user.region)
-        # SACCO managers see only their cooperative
-        if user.role == "sacco_manager":
-            qs = qs.filter(contact_person=user)
-        return qs.order_by("name")
-
-    def get_context_data(self, **kwargs):
-        ctx = super().get_context_data(**kwargs)
-        ctx["type_choices"] = Cooperative.COOPERATIVE_TYPES
-        ctx["status_choices"] = Cooperative.STATUS_CHOICES
-        from users.models import Region
-        ctx["regions"] = Region.objects.filter(country_code="SZ").order_by("name")
-        return ctx
 
 
-class CooperativeDetailView(LoginRequiredMixin, DetailView):
+class CooperativeDetailView(RegionalAccessMixin, DetailView):
     model = Cooperative
     template_name = "cooperatives/cooperative_detail.html"
     context_object_name = "cooperative"
+    slug_field = "unique_id"
+    slug_url_kwarg = "uuid"
 
     def get_context_data(self, **kwargs):
-        ctx = super().get_context_data(**kwargs)
-        coop = self.object
-        ctx["members"] = coop.members.filter(is_active=True).order_by("last_name")[:10]
-        ctx["member_count"] = coop.members.filter(is_active=True).count()
-        ctx["latest_summary"] = (
-            coop.financial_summaries.filter(is_verified=True).order_by("-period_end").first()
+        context = super().get_context_data(**kwargs)
+
+        members_list = self.object.members.all().order_by("last_name", "first_name")
+        paginator = Paginator(members_list, 20)
+        context["members"] = paginator.get_page(self.request.GET.get("page"))
+
+        context["available_questionnaires"] = Questionnaire.objects.filter(target_model="cooperative", is_active=True)
+
+        context["certificates"] = self.object.certificates.all().order_by("-issued_date")
+        context["sales"] = self.object.sales.select_related("buyer").order_by("-year", "-quantity_kg")
+
+        context["sales_by_year"] = (
+            self.object.sales.values("year").annotate(total_qty=Sum("quantity_kg")).order_by("year")
         )
-        ctx["board"] = coop.board_members.filter(is_active=True).select_related("member")
-        ctx["trainings"] = coop.training_records.order_by("-training_date")[:5]
-        ctx["open_alerts"] = coop.financial_summaries.filter(
-            # proxy via analytics — count unresolved alerts for this coop
+        context["sales_by_destination"] = (
+            self.object.sales.values("destination_country").annotate(total_qty=Sum("quantity_kg")).order_by("-total_qty")
         )
-        return ctx
+
+        context["buyers"] = Buyer.objects.all().order_by("name")
+        return context
 
 
 class CooperativeCreateView(RoleRequiredMixin, CreateView):
     model = Cooperative
     form_class = CooperativeForm
     template_name = "cooperatives/cooperative_form.html"
-    allowed_roles = WRITE_ROLES
+    required_roles = ["admin", "regional_officer"]
 
     def form_valid(self, form):
+        if not getattr(self.request.user, "region", None):
+            form.add_error(None, _("Unable to create a cooperative because your user account is not assigned to a region."))
+            return self.form_invalid(form)
+
+        form.instance.region = self.request.user.region
         response = super().form_valid(form)
-        _log(self.request, AuditLog.ACTION_CREATE, self.object,
-             description=f"Created cooperative: {self.object.name}")
+        _log(self.request, AuditLog.ACTION_CREATE, self.object, description=f"Created cooperative: {self.object.name}")
         messages.success(self.request, _("Cooperative created successfully."))
         return response
 
     def get_success_url(self):
-        return reverse_lazy("cooperatives:cooperative_detail", kwargs={"pk": self.object.pk})
+        return reverse_lazy("cooperatives:cooperative_detail", kwargs={"uuid": self.object.unique_id})
 
 
-class CooperativeUpdateView(RoleRequiredMixin, UpdateView):
+class CooperativeUpdateView(RegionalAccessMixin, RoleRequiredMixin, UpdateView):
     model = Cooperative
     form_class = CooperativeForm
     template_name = "cooperatives/cooperative_form.html"
-    allowed_roles = WRITE_ROLES
+    success_url = reverse_lazy("cooperatives:cooperative_list")
+    required_roles = ["admin", "regional_officer", "manager"]
+    slug_field = "unique_id"
+    slug_url_kwarg = "uuid"
 
     def form_valid(self, form):
-        before = {f: str(getattr(self.object, f)) for f in form.changed_data}
         response = super().form_valid(form)
-        after = {f: str(getattr(self.object, f)) for f in form.changed_data}
-        _log(self.request, AuditLog.ACTION_UPDATE, self.object,
-             before=before, after=after,
-             description=f"Updated cooperative: {self.object.name}")
+        _log(self.request, AuditLog.ACTION_UPDATE, self.object, description=f"Updated cooperative: {self.object.name}")
         messages.success(self.request, _("Cooperative updated successfully."))
         return response
 
-    def get_success_url(self):
-        return reverse_lazy("cooperatives:cooperative_detail", kwargs={"pk": self.object.pk})
 
-
-class CooperativeDeleteView(RoleRequiredMixin, DeleteView):
+class CooperativeDeleteView(RegionalAccessMixin, RoleRequiredMixin, DeleteView):
     model = Cooperative
     template_name = "cooperatives/cooperative_confirm_delete.html"
     success_url = reverse_lazy("cooperatives:cooperative_list")
-    allowed_roles = ["system_admin"]
+    required_roles = ["admin"]
+    slug_field = "unique_id"
+    slug_url_kwarg = "uuid"
 
     def form_valid(self, form):
-        _log(self.request, AuditLog.ACTION_DELETE, self.object,
-             description=f"Deleted cooperative: {self.object.name}")
-        messages.success(self.request, _("Cooperative deleted."))
+        _log(self.request, AuditLog.ACTION_DELETE, self.object, description=f"Deleted cooperative: {self.object.name}")
         return super().form_valid(form)
 
 
 # ═════════════════════════════════════════════════════════════════════════════
-# MEMBER
+# MEMBERS
 # ═════════════════════════════════════════════════════════════════════════════
 
-class MemberListView(LoginRequiredMixin, ListView):
+class MemberListView(RegionalAccessMixin, ListView):
     model = Member
     template_name = "cooperatives/member_list.html"
     context_object_name = "members"
-    paginate_by = 25
-
-    def get_queryset(self):
-        qs = Member.objects.select_related("cooperative", "cooperative__region")
-        user = self.request.user
-        # Scope by user role
-        if user.role == "sacco_manager":
-            qs = qs.filter(cooperative__contact_person=user)
-        elif user.role == "regional_officer" and user.region:
-            qs = qs.filter(cooperative__region=user.region)
-        # Filter by cooperative
-        coop_id = self.kwargs.get("cooperative_pk") or self.request.GET.get("cooperative")
-        if coop_id:
-            qs = qs.filter(cooperative_id=coop_id)
-        # Search
-        q = self.request.GET.get("q", "").strip()
-        if q:
-            qs = qs.filter(
-                Q(first_name__icontains=q) | Q(last_name__icontains=q)
-                | Q(member_id__icontains=q) | Q(national_id__icontains=q)
-            )
-        gender = self.request.GET.get("gender")
-        if gender:
-            qs = qs.filter(gender=gender)
-        age_group = self.request.GET.get("age_group")
-        if age_group:
-            qs = qs.filter(age_group=age_group)
-        is_youth = self.request.GET.get("is_youth")
-        if is_youth == "1":
-            qs = qs.filter(is_youth=True)
-        is_marginalized = self.request.GET.get("is_marginalized")
-        if is_marginalized == "1":
-            qs = qs.filter(is_marginalized=True)
-        return qs.filter(is_active=True).order_by("last_name", "first_name")
-
-    def get_context_data(self, **kwargs):
-        ctx = super().get_context_data(**kwargs)
-        ctx["gender_choices"] = Member._meta.get_field("gender").choices
-        ctx["age_group_choices"] = Member._meta.get_field("age_group").choices
-        coop_id = self.kwargs.get("cooperative_pk") or self.request.GET.get("cooperative")
-        if coop_id:
-            ctx["cooperative"] = get_object_or_404(Cooperative, pk=coop_id)
-        return ctx
+    region_field = "cooperative__region"
 
 
-class MemberDetailView(LoginRequiredMixin, DetailView):
+class MemberDetailView(RegionalAccessMixin, DetailView):
     model = Member
     template_name = "cooperatives/member_detail.html"
     context_object_name = "member"
+    slug_field = "unique_id"
+    slug_url_kwarg = "uuid"
+    region_field = "cooperative__region"
 
     def get_context_data(self, **kwargs):
-        ctx = super().get_context_data(**kwargs)
-        member = self.object
-        ctx["loans"] = member.loan_accounts.order_by("-disbursement_date")
-        ctx["savings"] = member.savings_accounts.filter(is_active=True)
-        ctx["active_loans"] = member.loan_accounts.filter(
-            status=LoanAccount.STATUS_ACTIVE
-        ).aggregate(total=Sum("outstanding_balance"))["total"] or 0
-        return ctx
+        context = super().get_context_data(**kwargs)
+        context["cooperative"] = self.object.cooperative
+        context["farms"] = self.object.farms.all()
+
+        prod_list = ProductionRecord.objects.filter(
+            Q(farm__member=self.object) | Q(member=self.object)
+        ).distinct().order_by("-harvest_date")
+        paginator = Paginator(prod_list, 10)
+        context["production_records"] = paginator.get_page(self.request.GET.get("page"))
+
+        context["available_questionnaires"] = Questionnaire.objects.filter(target_model="member", is_active=True)
+        return context
 
 
-class MemberCreateView(RoleRequiredMixin, CreateView):
+class MemberCreateView(RegionalAccessMixin, RoleRequiredMixin, RegionalFormMixin, CreateView):
     model = Member
     form_class = MemberForm
     template_name = "cooperatives/member_form.html"
-    allowed_roles = WRITE_ROLES
+    success_url = reverse_lazy("cooperatives:member_list")
+    required_roles = ["manager", "admin", "regional_officer"]
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        _log(self.request, AuditLog.ACTION_CREATE, self.object, description=f"Created member: {self.object}")
+        messages.success(self.request, _("Member created successfully."))
+        return response
+
+
+class MemberUpdateView(RegionalAccessMixin, RoleRequiredMixin, UpdateView):
+    model = Member
+    form_class = MemberForm
+    template_name = "cooperatives/member_form.html"
+    success_url = reverse_lazy("cooperatives:member_list")
+    required_roles = ["manager", "admin", "regional_officer"]
+    slug_field = "unique_id"
+    slug_url_kwarg = "uuid"
+    region_field = "cooperative__region"
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        _log(self.request, AuditLog.ACTION_UPDATE, self.object, description=f"Updated member: {self.object}")
+        messages.success(self.request, _("Member updated successfully."))
+        return response
+
+
+class MemberDeleteView(RegionalAccessMixin, RoleRequiredMixin, DeleteView):
+    model = Member
+    template_name = "cooperatives/member_confirm_delete.html"
+    success_url = reverse_lazy("cooperatives:member_list")
+    required_roles = ["manager", "admin"]
+    slug_field = "unique_id"
+    slug_url_kwarg = "uuid"
+    region_field = "cooperative__region"
+
+    def form_valid(self, form):
+        _log(self.request, AuditLog.ACTION_DELETE, self.object, description=f"Deleted member: {self.object}")
+        return super().form_valid(form)
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# CHERRY DELIVERIES (ProductionRecord, record_type=cherry_delivery)
+# ═════════════════════════════════════════════════════════════════════════════
+
+class CherryDeliveryListView(RegionalAccessMixin, ListView):
+    model = ProductionRecord
+    template_name = "cooperatives/cherry_delivery_list.html"
+    context_object_name = "deliveries"
+
+    def get_queryset(self):
+        qs = ProductionRecord.objects.filter(
+            record_type=ProductionRecord.RECORD_TYPE_CHERRY
+        ).select_related("station", "member")
+        qs = _scope_production_records_to_region(qs, self.request.user)
+
+        station_id = self.request.GET.get("station")
+        farmer_code = self.request.GET.get("farmer_code")
+        sync_status = self.request.GET.get("sync_status")
+        date_from = self.request.GET.get("date_from")
+        date_to = self.request.GET.get("date_to")
+
+        if station_id:
+            qs = qs.filter(station_id=station_id)
+        if farmer_code:
+            qs = qs.filter(member__farmer_code__icontains=farmer_code)
+        if sync_status == "pending":
+            qs = qs.filter(is_locally_created=True)
+        elif sync_status == "synced":
+            qs = qs.filter(is_locally_created=False)
+        if date_from:
+            qs = qs.filter(purchase_date__gte=date_from)
+        if date_to:
+            qs = qs.filter(purchase_date__lte=date_to)
+
+        return qs.order_by("-purchase_date", "-id")
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["stations"] = WashingStation.objects.filter(is_active=True)
+        context["selected_station"] = self.request.GET.get("station") or ""
+        return context
+
+
+class CherryDeliveryCreateView(RegionalAccessMixin, RoleRequiredMixin, RegionalFormMixin, CreateView):
+    model = ProductionRecord
+    form_class = CherryDeliveryForm
+    template_name = "cooperatives/cherry_delivery_form.html"
+    success_url = reverse_lazy("cooperatives:cherry_delivery_list")
+    required_roles = ["manager", "admin", "regional_officer", "field_agent"]
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        coop_pk = self.kwargs.get("cooperative_pk")
-        if coop_pk:
-            kwargs["cooperative"] = get_object_or_404(Cooperative, pk=coop_pk)
+        cooperative = None
+        if getattr(self.request.user, "region", None):
+            cooperative = Cooperative.objects.filter(region=self.request.user.region).first()
+        if cooperative:
+            kwargs["cooperative"] = cooperative
         return kwargs
 
     def form_valid(self, form):
         response = super().form_valid(form)
-        _log(self.request, AuditLog.ACTION_CREATE, self.object,
-             description=f"Created member: {self.object}")
-        messages.success(self.request, _("Member registered successfully."))
+        _log(self.request, AuditLog.ACTION_CREATE, self.object, description=f"Recorded cherry delivery: {self.object}")
+
+        # Best-effort offline sync queuing — failures here should not block the main flow.
+        try:
+            from django.forms.models import model_to_dict
+            from sync.models import PendingChange
+
+            device = getattr(self.request.user, "devices", None)
+            device = device.first() if device is not None else None
+            if device:
+                PendingChange.objects.create(
+                    device=device,
+                    content_object=self.object,
+                    change_type=PendingChange.CHANGE_CREATE,
+                    payload=model_to_dict(self.object),
+                    local_timestamp=self.object.reception_date or self.object.purchase_date,
+                )
+        except Exception:
+            pass
         return response
 
-    def get_success_url(self):
-        return reverse_lazy("cooperatives:member_detail", kwargs={"pk": self.object.pk})
+
+class CherryDeliveryDetailView(RegionalAccessMixin, DetailView):
+    model = ProductionRecord
+    template_name = "cooperatives/cherry_delivery_detail.html"
+    context_object_name = "delivery"
+    slug_field = "unique_id"
+    slug_url_kwarg = "uuid"
+
+    def get_queryset(self):
+        return _scope_production_records_to_region(ProductionRecord.objects.all(), self.request.user)
 
 
-class MemberUpdateView(RoleRequiredMixin, UpdateView):
-    model = Member
-    form_class = MemberForm
-    template_name = "cooperatives/member_form.html"
-    allowed_roles = WRITE_ROLES
+class CherryDeliveryUpdateView(RegionalAccessMixin, RoleRequiredMixin, RegionalFormMixin, UpdateView):
+    model = ProductionRecord
+    form_class = CherryDeliveryForm
+    template_name = "cooperatives/cherry_delivery_form.html"
+    success_url = reverse_lazy("cooperatives:cherry_delivery_list")
+    required_roles = ["manager", "admin", "regional_officer", "field_agent"]
+    slug_field = "unique_id"
+    slug_url_kwarg = "uuid"
+
+    def get_queryset(self):
+        return _scope_production_records_to_region(ProductionRecord.objects.all(), self.request.user)
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        cooperative = None
+        if getattr(self.request.user, "region", None):
+            cooperative = Cooperative.objects.filter(region=self.request.user.region).first()
+        if cooperative:
+            kwargs["cooperative"] = cooperative
+        return kwargs
 
     def form_valid(self, form):
-        before = {f: str(getattr(self.object, f)) for f in form.changed_data}
         response = super().form_valid(form)
-        after = {f: str(getattr(self.object, f)) for f in form.changed_data}
-        _log(self.request, AuditLog.ACTION_UPDATE, self.object,
-             before=before, after=after)
-        messages.success(self.request, _("Member updated successfully."))
+        _log(self.request, AuditLog.ACTION_UPDATE, self.object, description=f"Updated cherry delivery: {self.object}")
         return response
 
-    def get_success_url(self):
-        return reverse_lazy("cooperatives:member_detail", kwargs={"pk": self.object.pk})
+
+class CherryDeliveryDeleteView(RegionalAccessMixin, RoleRequiredMixin, DeleteView):
+    model = ProductionRecord
+    template_name = "cooperatives/cherry_delivery_confirm_delete.html"
+    success_url = reverse_lazy("cooperatives:cherry_delivery_list")
+    required_roles = ["admin", "manager"]
+    slug_field = "unique_id"
+    slug_url_kwarg = "uuid"
+
+    def get_queryset(self):
+        return _scope_production_records_to_region(ProductionRecord.objects.all(), self.request.user)
+
+    def form_valid(self, form):
+        _log(self.request, AuditLog.ACTION_DELETE, self.object, description=f"Deleted cherry delivery: {self.object}")
+        return super().form_valid(form)
 
 
 # ═════════════════════════════════════════════════════════════════════════════
-# FINANCIAL SUMMARY
+# PRODUCTION RECORDS (generic harvest tracking)
 # ═════════════════════════════════════════════════════════════════════════════
 
-class FinancialSummaryListView(LoginRequiredMixin, ListView):
-    model = SACCOFinancialSummary
-    template_name = "cooperatives/financial_summary_list.html"
-    context_object_name = "summaries"
+class ProductionRecordListView(RegionalAccessMixin, ListView):
+    model = ProductionRecord
+    template_name = "cooperatives/production_record_list.html"
+    context_object_name = "production_records"
     paginate_by = 20
 
     def get_queryset(self):
-        qs = SACCOFinancialSummary.objects.select_related(
-            "cooperative", "submitted_by"
-        )
-        user = self.request.user
-        if user.role == "sacco_manager":
-            qs = qs.filter(cooperative__contact_person=user)
-        elif user.role == "regional_officer" and user.region:
-            qs = qs.filter(cooperative__region=user.region)
-        coop_id = self.kwargs.get("cooperative_pk") or self.request.GET.get("cooperative")
-        if coop_id:
-            qs = qs.filter(cooperative_id=coop_id)
-        period_type = self.request.GET.get("period_type")
-        if period_type:
-            qs = qs.filter(period_type=period_type)
-        return qs.order_by("-period_end")
+        qs = ProductionRecord.objects.filter(
+            record_type=ProductionRecord.RECORD_TYPE_GENERIC
+        ).select_related("farm__member__cooperative").order_by("-harvest_date")
+        return _scope_production_records_to_region(qs, self.request.user)
+
+
+class ProductionRecordDetailView(RegionalAccessMixin, DetailView):
+    model = ProductionRecord
+    template_name = "cooperatives/production_record_detail.html"
+    context_object_name = "production_record"
+    slug_field = "unique_id"
+    slug_url_kwarg = "uuid"
+
+    def get_queryset(self):
+        return _scope_production_records_to_region(ProductionRecord.objects.all(), self.request.user)
 
     def get_context_data(self, **kwargs):
-        ctx = super().get_context_data(**kwargs)
-        ctx["period_choices"] = SACCOFinancialSummary.PERIOD_CHOICES
-        coop_id = self.kwargs.get("cooperative_pk")
-        if coop_id:
-            ctx["cooperative"] = get_object_or_404(Cooperative, pk=coop_id)
-        return ctx
+        context = super().get_context_data(**kwargs)
+        content_type = ContentType.objects.get_for_model(ProductionRecord)
+        context["submissions"] = Submission.objects.filter(
+            content_type=content_type, object_id=self.object.pk
+        ).select_related("questionnaire").order_by("-submitted_at")
+        return context
 
 
-class FinancialSummaryDetailView(LoginRequiredMixin, DetailView):
-    model = SACCOFinancialSummary
-    template_name = "cooperatives/financial_summary_detail.html"
-    context_object_name = "summary"
-
-    def get_context_data(self, **kwargs):
-        ctx = super().get_context_data(**kwargs)
-        s = self.object
-        # Build KPI card data for template
-        ctx["kpi_cards"] = [
-            {
-                "label": _("Delinquency Rate (PAR30)"),
-                "value": s.kpi_delinquency_rate,
-                "format": "percent",
-                "higher_is_better": False,
-            },
-            {
-                "label": _("Liquidity Ratio"),
-                "value": s.kpi_liquidity_ratio,
-                "format": "percent",
-                "higher_is_better": True,
-            },
-            {
-                "label": _("Capital Adequacy"),
-                "value": s.kpi_capital_adequacy,
-                "format": "percent",
-                "higher_is_better": True,
-            },
-            {
-                "label": _("Return on Assets (ROA)"),
-                "value": s.kpi_roa,
-                "format": "percent",
-                "higher_is_better": True,
-            },
-            {
-                "label": _("Operational Self-Sufficiency"),
-                "value": s.kpi_operational_self_sufficiency,
-                "format": "percent",
-                "higher_is_better": True,
-            },
-            {
-                "label": _("Youth Participation"),
-                "value": s.kpi_youth_participation_rate,
-                "format": "percent",
-                "higher_is_better": True,
-            },
-            {
-                "label": _("Female Participation"),
-                "value": s.kpi_female_participation_rate,
-                "format": "percent",
-                "higher_is_better": True,
-            },
-            {
-                "label": _("Cost per Borrower (SZL)"),
-                "value": s.kpi_cost_per_borrower,
-                "format": "currency",
-                "higher_is_better": False,
-            },
-        ]
-        return ctx
-
-
-class FinancialSummaryCreateView(RoleRequiredMixin, CreateView):
-    model = SACCOFinancialSummary
-    form_class = SACCOFinancialSummaryForm
-    template_name = "cooperatives/financial_summary_form.html"
-    allowed_roles = WRITE_ROLES
-
-    def get_initial(self):
-        initial = super().get_initial()
-        coop_pk = self.kwargs.get("cooperative_pk")
-        if coop_pk:
-            initial["cooperative"] = coop_pk
-        return initial
-
-    def form_valid(self, form):
-        form.instance.submitted_by = self.request.user
-        response = super().form_valid(form)
-        # Trigger KPI computation via Celery
-        from integrations.tasks import compute_financial_kpis
-        compute_financial_kpis.delay(self.object.pk)
-        _log(self.request, AuditLog.ACTION_CREATE, self.object,
-             description=f"Submitted financial summary: {self.object}")
-        messages.success(
-            self.request,
-            _("Financial data submitted. KPIs will be computed shortly."),
-        )
-        return response
-
-    def get_success_url(self):
-        return reverse_lazy(
-            "cooperatives:financial_summary_detail", kwargs={"pk": self.object.pk}
-        )
-
-
-class FinancialSummaryVerifyView(RoleRequiredMixin, UpdateView):
-    """
-    Allows government/apex roles to verify a submitted financial summary.
-    Sets is_verified=True and records the verifier.
-    """
-    model = SACCOFinancialSummary
-    fields: list = []  # no editable fields – just verification action
-    template_name = "cooperatives/financial_summary_verify.html"
-    allowed_roles = GOVERNMENT_ROLES
-
-    def form_valid(self, form):
-        self.object.is_verified = True
-        self.object.verified_by = self.request.user
-        self.object.save(update_fields=["is_verified", "verified_by"])
-        _log(self.request, AuditLog.ACTION_UPDATE, self.object,
-             description=f"Verified financial summary #{self.object.pk}")
-        messages.success(self.request, _("Financial summary verified."))
-        return redirect(
-            "cooperatives:financial_summary_detail", pk=self.object.pk
-        )
-
-
-# ═════════════════════════════════════════════════════════════════════════════
-# BOARD MEMBER
-# ═════════════════════════════════════════════════════════════════════════════
-
-class BoardMemberCreateView(RoleRequiredMixin, CreateView):
-    model = BoardMember
-    form_class = BoardMemberForm
-    template_name = "cooperatives/board_member_form.html"
-    allowed_roles = WRITE_ROLES
-
-    def get_initial(self):
-        initial = super().get_initial()
-        coop_pk = self.kwargs.get("cooperative_pk")
-        if coop_pk:
-            initial["cooperative"] = coop_pk
-        return initial
+class ProductionRecordCreateView(RegionalAccessMixin, RoleRequiredMixin, RegionalFormMixin, CreateView):
+    model = ProductionRecord
+    form_class = ProductionRecordForm
+    template_name = "cooperatives/production_record_form.html"
+    success_url = reverse_lazy("cooperatives:production_record_list")
+    required_roles = ["admin", "manager", "field_agent"]
 
     def form_valid(self, form):
         response = super().form_valid(form)
-        _log(self.request, AuditLog.ACTION_CREATE, self.object,
-             description=f"Added board member: {self.object}")
-        messages.success(self.request, _("Board member added."))
+        _log(self.request, AuditLog.ACTION_CREATE, self.object, description=f"Recorded production: {self.object}")
         return response
 
-    def get_success_url(self):
-        return reverse_lazy(
-            "cooperatives:cooperative_detail",
-            kwargs={"pk": self.object.cooperative_id},
-        )
+
+class ProductionRecordUpdateView(RegionalAccessMixin, RoleRequiredMixin, RegionalFormMixin, UpdateView):
+    model = ProductionRecord
+    form_class = ProductionRecordForm
+    template_name = "cooperatives/production_record_form.html"
+    success_url = reverse_lazy("cooperatives:production_record_list")
+    required_roles = ["admin", "manager", "field_agent"]
+    slug_field = "unique_id"
+    slug_url_kwarg = "uuid"
+
+    def get_queryset(self):
+        return _scope_production_records_to_region(ProductionRecord.objects.all(), self.request.user)
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        _log(self.request, AuditLog.ACTION_UPDATE, self.object, description=f"Updated production record: {self.object}")
+        return response
+
+
+class ProductionRecordDeleteView(RegionalAccessMixin, RoleRequiredMixin, DeleteView):
+    model = ProductionRecord
+    template_name = "cooperatives/production_record_confirm_delete.html"
+    success_url = reverse_lazy("cooperatives:production_record_list")
+    required_roles = ["admin", "manager"]
+    slug_field = "unique_id"
+    slug_url_kwarg = "uuid"
+
+    def get_queryset(self):
+        return _scope_production_records_to_region(ProductionRecord.objects.all(), self.request.user)
+
+    def form_valid(self, form):
+        _log(self.request, AuditLog.ACTION_DELETE, self.object, description=f"Deleted production record: {self.object}")
+        return super().form_valid(form)
 
 
 # ═════════════════════════════════════════════════════════════════════════════
-# TRAINING RECORD
+# FINANCIAL RECORDS
 # ═════════════════════════════════════════════════════════════════════════════
 
-class TrainingRecordListView(LoginRequiredMixin, ListView):
-    model = TrainingRecord
-    template_name = "cooperatives/training_list.html"
-    context_object_name = "trainings"
+class FinancialRecordListView(RegionalAccessMixin, ListView):
+    model = FinancialRecord
+    template_name = "cooperatives/financial_record_list.html"
+    context_object_name = "financial_records"
+    paginate_by = 20
+    region_field = "cooperative__region"
+
+    def get_queryset(self):
+        return super().get_queryset().select_related("cooperative").order_by("-transaction_date")
+
+
+class FinancialRecordDetailView(RegionalAccessMixin, DetailView):
+    model = FinancialRecord
+    template_name = "cooperatives/financial_record_detail.html"
+    context_object_name = "financial_record"
+    slug_field = "unique_id"
+    slug_url_kwarg = "uuid"
+    region_field = "cooperative__region"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        content_type = ContentType.objects.get_for_model(FinancialRecord)
+        context["submissions"] = Submission.objects.filter(
+            content_type=content_type, object_id=self.object.pk
+        ).select_related("questionnaire").order_by("-submitted_at")
+        return context
+
+
+class FinancialRecordCreateView(RegionalAccessMixin, RoleRequiredMixin, RegionalFormMixin, CreateView):
+    model = FinancialRecord
+    form_class = FinancialRecordForm
+    template_name = "cooperatives/financial_record_form.html"
+    success_url = reverse_lazy("cooperatives:financial_record_list")
+    required_roles = ["admin", "manager"]
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        _log(self.request, AuditLog.ACTION_CREATE, self.object, description=f"Recorded financial record: {self.object}")
+        return response
+
+
+class FinancialRecordUpdateView(RegionalAccessMixin, RoleRequiredMixin, RegionalFormMixin, UpdateView):
+    model = FinancialRecord
+    form_class = FinancialRecordForm
+    template_name = "cooperatives/financial_record_form.html"
+    success_url = reverse_lazy("cooperatives:financial_record_list")
+    required_roles = ["admin", "manager"]
+    slug_field = "unique_id"
+    slug_url_kwarg = "uuid"
+    region_field = "cooperative__region"
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        _log(self.request, AuditLog.ACTION_UPDATE, self.object, description=f"Updated financial record: {self.object}")
+        return response
+
+
+class FinancialRecordDeleteView(RegionalAccessMixin, RoleRequiredMixin, DeleteView):
+    model = FinancialRecord
+    template_name = "cooperatives/financial_record_confirm_delete.html"
+    success_url = reverse_lazy("cooperatives:financial_record_list")
+    required_roles = ["admin"]
+    slug_field = "unique_id"
+    slug_url_kwarg = "uuid"
+    region_field = "cooperative__region"
+
+    def form_valid(self, form):
+        _log(self.request, AuditLog.ACTION_DELETE, self.object, description=f"Deleted financial record: {self.object}")
+        return super().form_valid(form)
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# BUYERS
+# ═════════════════════════════════════════════════════════════════════════════
+
+class BuyerListView(RegionalAccessMixin, ListView):
+    model = Buyer
+    template_name = "cooperatives/buyer_list.html"
+    context_object_name = "buyers"
     paginate_by = 20
 
     def get_queryset(self):
-        qs = TrainingRecord.objects.select_related("cooperative")
-        coop_pk = self.kwargs.get("cooperative_pk") or self.request.GET.get("cooperative")
-        if coop_pk:
-            qs = qs.filter(cooperative_id=coop_pk)
-        user = self.request.user
-        if user.role == "sacco_manager":
-            qs = qs.filter(cooperative__contact_person=user)
-        elif user.role == "regional_officer" and user.region:
-            qs = qs.filter(cooperative__region=user.region)
-        return qs.order_by("-training_date")
+        return Buyer.objects.order_by("name")
 
 
-class TrainingRecordCreateView(RoleRequiredMixin, CreateView):
-    model = TrainingRecord
-    form_class = TrainingRecordForm
-    template_name = "cooperatives/training_form.html"
-    allowed_roles = WRITE_ROLES
-
-    def get_initial(self):
-        initial = super().get_initial()
-        coop_pk = self.kwargs.get("cooperative_pk")
-        if coop_pk:
-            initial["cooperative"] = coop_pk
-        return initial
-
-    def form_valid(self, form):
-        response = super().form_valid(form)
-        messages.success(self.request, _("Training record added."))
-        return response
-
-    def get_success_url(self):
-        return reverse_lazy(
-            "cooperatives:cooperative_detail",
-            kwargs={"pk": self.object.cooperative_id},
-        )
+class BuyerCreateView(RegionalAccessMixin, RoleRequiredMixin, CreateView):
+    model = Buyer
+    form_class = BuyerForm
+    template_name = "cooperatives/buyer_form.html"
+    success_url = reverse_lazy("cooperatives:buyer_list")
+    required_roles = ["admin", "regional_officer", "manager"]
 
 
-# ═════════════════════════════════════════════════════════════════════════════
-# LOAN ACCOUNT
-# ═════════════════════════════════════════════════════════════════════════════
-
-class LoanAccountListView(LoginRequiredMixin, ListView):
-    model = LoanAccount
-    template_name = "cooperatives/loan_list.html"
-    context_object_name = "loans"
-    paginate_by = 25
+class BuyerUpdateView(RegionalAccessMixin, RoleRequiredMixin, UpdateView):
+    model = Buyer
+    form_class = BuyerForm
+    template_name = "cooperatives/buyer_form.html"
+    success_url = reverse_lazy("cooperatives:buyer_list")
+    required_roles = ["admin", "regional_officer", "manager"]
+    slug_field = "unique_id"
+    slug_url_kwarg = "uuid"
 
     def get_queryset(self):
-        qs = LoanAccount.objects.select_related("member", "member__cooperative")
-        user = self.request.user
-        if user.role == "sacco_manager":
-            qs = qs.filter(member__cooperative__contact_person=user)
-        elif user.role == "regional_officer" and user.region:
-            qs = qs.filter(member__cooperative__region=user.region)
-        coop_id = self.request.GET.get("cooperative")
-        if coop_id:
-            qs = qs.filter(member__cooperative_id=coop_id)
-        status = self.request.GET.get("status")
-        if status:
-            qs = qs.filter(status=status)
-        delinquent = self.request.GET.get("delinquent")
-        if delinquent == "1":
-            qs = qs.filter(days_in_arrears__gt=0)
-        return qs.order_by("-disbursement_date")
+        # Buyers are a shared, global resource — not owned by any cooperative/region.
+        return Buyer.objects.all()
+
+
+class BuyerDeleteView(RegionalAccessMixin, RoleRequiredMixin, DeleteView):
+    model = Buyer
+    template_name = "cooperatives/buyer_confirm_delete.html"
+    success_url = reverse_lazy("cooperatives:buyer_list")
+    required_roles = ["admin", "regional_officer", "manager"]
+    slug_field = "unique_id"
+    slug_url_kwarg = "uuid"
+
+    def get_queryset(self):
+        return Buyer.objects.all()
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# COOPERATIVE CERTIFICATES
+# ═════════════════════════════════════════════════════════════════════════════
+
+class CooperativeCertificateListView(RegionalAccessMixin, ListView):
+    model = CooperativeCertificate
+    template_name = "cooperatives/cooperative_certificate_list.html"
+    context_object_name = "certificates"
+    paginate_by = 20
+
+    def get_cooperative(self):
+        return _get_cooperative_for_region(self.request.user, self.kwargs.get("uuid"))
+
+    def get_queryset(self):
+        return CooperativeCertificate.objects.filter(cooperative=self.get_cooperative()).order_by("-issued_date")
 
     def get_context_data(self, **kwargs):
-        ctx = super().get_context_data(**kwargs)
-        ctx["status_choices"] = LoanAccount.STATUS_CHOICES
-        return ctx
+        context = super().get_context_data(**kwargs)
+        context["cooperative"] = self.get_cooperative()
+        return context
 
 
-class LoanAccountCreateView(RoleRequiredMixin, CreateView):
-    model = LoanAccount
-    form_class = LoanAccountForm
-    template_name = "cooperatives/loan_form.html"
-    allowed_roles = WRITE_ROLES
+class CooperativeCertificateCreateView(RegionalAccessMixin, RoleRequiredMixin, CreateView):
+    model = CooperativeCertificate
+    form_class = CooperativeCertificateForm
+    template_name = "cooperatives/cooperative_certificate_form.html"
+    required_roles = ["admin", "regional_officer", "manager"]
+
+    def dispatch(self, request, *args, **kwargs):
+        self.cooperative = _get_cooperative_for_region(request.user, kwargs.get("uuid"))
+        return super().dispatch(request, *args, **kwargs)
 
     def form_valid(self, form):
-        response = super().form_valid(form)
-        _log(self.request, AuditLog.ACTION_CREATE, self.object,
-             description=f"Created loan: {self.object.loan_id}")
-        messages.success(self.request, _("Loan account created."))
-        return response
+        form.instance.cooperative = self.cooperative
+        return super().form_valid(form)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["cooperative"] = self.cooperative
+        return context
 
     def get_success_url(self):
-        return reverse_lazy(
-            "cooperatives:member_detail", kwargs={"pk": self.object.member_id}
-        )
+        return reverse_lazy("cooperatives:cooperative_detail", kwargs={"uuid": self.cooperative.unique_id})
+
+
+class CooperativeCertificateUpdateView(RegionalAccessMixin, RoleRequiredMixin, UpdateView):
+    model = CooperativeCertificate
+    form_class = CooperativeCertificateForm
+    template_name = "cooperatives/cooperative_certificate_form.html"
+    required_roles = ["admin", "regional_officer", "manager"]
+    slug_field = "unique_id"
+    slug_url_kwarg = "cert_uuid"
+    region_field = "cooperative__region"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["cooperative"] = self.object.cooperative
+        return context
+
+    def get_success_url(self):
+        return reverse_lazy("cooperatives:cooperative_detail", kwargs={"uuid": self.object.cooperative.unique_id})
+
+
+class CooperativeCertificateDeleteView(RegionalAccessMixin, RoleRequiredMixin, DeleteView):
+    model = CooperativeCertificate
+    template_name = "cooperatives/cooperative_certificate_confirm_delete.html"
+    required_roles = ["admin", "regional_officer", "manager"]
+    slug_field = "unique_id"
+    slug_url_kwarg = "cert_uuid"
+    region_field = "cooperative__region"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["cooperative"] = self.object.cooperative
+        return context
+
+    def get_success_url(self):
+        return reverse_lazy("cooperatives:cooperative_detail", kwargs={"uuid": self.object.cooperative.unique_id})
 
 
 # ═════════════════════════════════════════════════════════════════════════════
-# SAVINGS ACCOUNT
+# COOPERATIVE SALES
 # ═════════════════════════════════════════════════════════════════════════════
 
-class SavingsAccountCreateView(RoleRequiredMixin, CreateView):
-    model = SavingsAccount
-    form_class = SavingsAccountForm
-    template_name = "cooperatives/savings_form.html"
-    allowed_roles = WRITE_ROLES
+class CooperativeSaleListView(RegionalAccessMixin, ListView):
+    model = CooperativeSale
+    template_name = "cooperatives/cooperative_sale_list.html"
+    context_object_name = "sales"
+    paginate_by = 20
+
+    def get_cooperative(self):
+        return _get_cooperative_for_region(self.request.user, self.kwargs.get("uuid"))
+
+    def get_queryset(self):
+        return CooperativeSale.objects.filter(cooperative=self.get_cooperative()).select_related("buyer").order_by("-year", "-quantity_kg")
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["cooperative"] = self.get_cooperative()
+        return context
+
+
+class CooperativeSaleCreateView(RegionalAccessMixin, RoleRequiredMixin, CreateView):
+    model = CooperativeSale
+    form_class = CooperativeSaleForm
+    template_name = "cooperatives/cooperative_sale_form.html"
+    required_roles = ["admin", "regional_officer", "manager"]
+
+    def dispatch(self, request, *args, **kwargs):
+        self.cooperative = _get_cooperative_for_region(request.user, kwargs.get("uuid"))
+        return super().dispatch(request, *args, **kwargs)
 
     def form_valid(self, form):
-        response = super().form_valid(form)
-        _log(self.request, AuditLog.ACTION_CREATE, self.object,
-             description=f"Created savings account: {self.object.account_number}")
-        messages.success(self.request, _("Savings account created."))
-        return response
+        form.instance.cooperative = self.cooperative
+        return super().form_valid(form)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["cooperative"] = self.cooperative
+        return context
 
     def get_success_url(self):
-        return reverse_lazy(
-            "cooperatives:member_detail", kwargs={"pk": self.object.member_id}
-        )
+        return reverse_lazy("cooperatives:cooperative_detail", kwargs={"uuid": self.cooperative.unique_id})
+
+
+class CooperativeSaleUpdateView(RegionalAccessMixin, RoleRequiredMixin, UpdateView):
+    model = CooperativeSale
+    form_class = CooperativeSaleForm
+    template_name = "cooperatives/cooperative_sale_form.html"
+    required_roles = ["admin", "regional_officer", "manager"]
+    slug_field = "unique_id"
+    slug_url_kwarg = "sale_uuid"
+    region_field = "cooperative__region"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["cooperative"] = self.object.cooperative
+        return context
+
+    def get_success_url(self):
+        return reverse_lazy("cooperatives:cooperative_detail", kwargs={"uuid": self.object.cooperative.unique_id})
+
+
+class CooperativeSaleDeleteView(RegionalAccessMixin, RoleRequiredMixin, DeleteView):
+    model = CooperativeSale
+    template_name = "cooperatives/cooperative_sale_confirm_delete.html"
+    required_roles = ["admin", "regional_officer", "manager"]
+    slug_field = "unique_id"
+    slug_url_kwarg = "sale_uuid"
+    region_field = "cooperative__region"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["cooperative"] = self.object.cooperative
+        return context
+
+    def get_success_url(self):
+        return reverse_lazy("cooperatives:cooperative_detail", kwargs={"uuid": self.object.cooperative.unique_id})
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# WASHING STATIONS
+# ═════════════════════════════════════════════════════════════════════════════
+
+class WashingStationListView(RegionalAccessMixin, RoleRequiredMixin, ListView):
+    model = WashingStation
+    template_name = "cooperatives/washingstation_list.html"
+    context_object_name = "stations"
+    paginate_by = 20
+    required_roles = ["admin", "regional_officer", "manager", "field_agent"]
+
+    def get_queryset(self):
+        qs = WashingStation.objects.select_related("cooperative").order_by("cooperative__name", "name")
+        user = self.request.user
+        if user.is_superuser:
+            return qs
+        if not getattr(user, "region", None):
+            return qs.none()
+        return qs.filter(cooperative__region=user.region)
+
+
+class WashingStationDetailView(RegionalAccessMixin, RoleRequiredMixin, DetailView):
+    model = WashingStation
+    template_name = "cooperatives/washingstation_detail.html"
+    context_object_name = "station"
+    required_roles = ["admin", "regional_officer", "manager", "field_agent"]
+    slug_field = "unique_id"
+    slug_url_kwarg = "uuid"
+    region_field = "cooperative__region"
+
+
+class WashingStationCreateView(RegionalAccessMixin, RoleRequiredMixin, CreateView):
+    model = WashingStation
+    form_class = WashingStationForm
+    template_name = "cooperatives/washingstation_form.html"
+    success_url = reverse_lazy("cooperatives:washing_station_list")
+    required_roles = ["admin", "regional_officer", "manager"]
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["user"] = self.request.user
+        return kwargs
+
+
+class WashingStationUpdateView(RegionalAccessMixin, RoleRequiredMixin, UpdateView):
+    model = WashingStation
+    form_class = WashingStationForm
+    template_name = "cooperatives/washingstation_form.html"
+    success_url = reverse_lazy("cooperatives:washing_station_list")
+    required_roles = ["admin", "regional_officer", "manager"]
+    slug_field = "unique_id"
+    slug_url_kwarg = "uuid"
+    region_field = "cooperative__region"
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["user"] = self.request.user
+        return kwargs
+
+
+class WashingStationDeleteView(RegionalAccessMixin, RoleRequiredMixin, DeleteView):
+    model = WashingStation
+    template_name = "cooperatives/washingstation_confirm_delete.html"
+    success_url = reverse_lazy("cooperatives:washing_station_list")
+    required_roles = ["admin", "regional_officer", "manager"]
+    slug_field = "unique_id"
+    slug_url_kwarg = "uuid"
+    region_field = "cooperative__region"

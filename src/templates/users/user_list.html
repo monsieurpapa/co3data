@@ -72,11 +72,11 @@
             <div class="dropdown">
               <button class="btn btn-sm btn-outline-secondary py-0" data-bs-toggle="dropdown"><i class="bi bi-three-dots"></i></button>
               <ul class="dropdown-menu dropdown-menu-end">
-                <li><a class="dropdown-item" href="{% url 'users:user_detail' u.pk %}"><i class="bi bi-eye me-2"></i>{% trans "View" %}</a></li>
-                <li><a class="dropdown-item" href="{% url 'users:user_update' u.pk %}"><i class="bi bi-pencil me-2"></i>{% trans "Edit" %}</a></li>
+                <li><a class="dropdown-item" href="{% url 'users:user_detail' u.unique_id %}"><i class="bi bi-eye me-2"></i>{% trans "View" %}</a></li>
+                <li><a class="dropdown-item" href="{% url 'users:user_update' u.unique_id %}"><i class="bi bi-pencil me-2"></i>{% trans "Edit" %}</a></li>
                 <li><hr class="dropdown-divider"></li>
                 <li>
-                  <form method="post" action="{% url 'users:user_toggle_active' u.pk %}">{% csrf_token %}
+                  <form method="post" action="{% url 'users:user_toggle_active' u.unique_id %}">{% csrf_token %}
                     <button class="dropdown-item {% if u.is_active %}text-danger{% else %}text-success{% endif %}" type="submit">
                       {% if u.is_active %}<i class="bi bi-person-x me-2"></i>{% trans "Deactivate" %}
                       {% else %}<i class="bi bi-person-check me-2"></i>{% trans "Activate" %}{% endif %}

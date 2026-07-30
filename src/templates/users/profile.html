@@ -63,14 +63,6 @@
             <div class="text-muted small">{% trans "Preferred Language" %}</div>
             <div>{{ request.user.get_preferred_language_display }}</div>
           </div>
-          <div class="col-md-6">
-            <div class="text-muted small">{% trans "Inclusion Flags" %}</div>
-            <div>
-              {% if request.user.is_youth %}<span class="badge bg-info me-1">{% trans "Youth" %}</span>{% endif %}
-              {% if request.user.is_marginalized %}<span class="badge bg-secondary">{% trans "Marginalized" %}</span>{% endif %}
-              {% if not request.user.is_youth and not request.user.is_marginalized %}<span class="text-muted small">–</span>{% endif %}
-            </div>
-          </div>
         </div>
       </div>
     </div>

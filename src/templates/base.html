@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{% block title %}CoopData Eswatini{% endblock %}</title>
+  <title>{% block title %}CO3DATA{% endblock %}</title>
 
   {# Bootstrap 5 #}
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
@@ -250,8 +250,8 @@
   <nav id="sidebar">
     <div class="brand">
       <i class="bi bi-grid-3x3-gap-fill me-2" style="color: var(--cd-accent)"></i>
-      CoopData
-      <div style="font-size:.7rem; opacity:.6; font-weight:400">SUCOSA II · Eswatini</div>
+      CO3DATA
+      <div style="font-size:.7rem; opacity:.6; font-weight:400">{% trans "Coopératives Café & Cacao · RDC" %}</div>
     </div>
 
     <div class="sidebar-scroll py-2">
@@ -295,20 +295,29 @@
           class="nav-link {% if url_name == 'cooperative_list' %}active{% endif %}">
           <i class="bi bi-building"></i>{% trans "Coopératives" %}
         </a>
-        <a href="{% url 'cooperatives:member_list_all' %}"
+        <a href="{% url 'cooperatives:member_list' %}"
           class="nav-link {% if url_name == 'member_list' %}active{% endif %}">
           <i class="bi bi-people"></i>{% trans "Membres" %}
         </a>
-        <a href="{% url 'cooperatives:financial_summary_list_all' %}"
-          class="nav-link {% if 'financial_summary' in url_name %}active{% endif %}">
-          <i class="bi bi-journal-text"></i>{% trans "États Financiers" %}
+        <a href="{% url 'cooperatives:washing_station_list' %}"
+          class="nav-link {% if 'washing_station' in url_name %}active{% endif %}">
+          <i class="bi bi-droplet"></i>{% trans "Stations de Lavage" %}
         </a>
-        <a href="{% url 'cooperatives:loan_list' %}" class="nav-link {% if url_name == 'loan_list' %}active{% endif %}">
-          <i class="bi bi-bank"></i>{% trans "Portefeuille de Prêts" %}
+        <a href="{% url 'cooperatives:cherry_delivery_list' %}"
+          class="nav-link {% if 'cherry_delivery' in url_name %}active{% endif %}">
+          <i class="bi bi-basket"></i>{% trans "Livraisons de Cerises" %}
         </a>
-        <a href="{% url 'cooperatives:training_list_all' %}"
-          class="nav-link {% if url_name == 'training_list_all' or url_name == 'training_list' %}active{% endif %}">
-          <i class="bi bi-book"></i>{% trans "Formations" %}
+        <a href="{% url 'cooperatives:production_record_list' %}"
+          class="nav-link {% if 'production_record' in url_name %}active{% endif %}">
+          <i class="bi bi-graph-up"></i>{% trans "Récoltes" %}
+        </a>
+        <a href="{% url 'cooperatives:financial_record_list' %}"
+          class="nav-link {% if 'financial_record' in url_name %}active{% endif %}">
+          <i class="bi bi-journal-text"></i>{% trans "Enregistrements Financiers" %}
+        </a>
+        <a href="{% url 'cooperatives:buyer_list' %}"
+          class="nav-link {% if 'buyer' in url_name %}active{% endif %}">
+          <i class="bi bi-briefcase"></i>{% trans "Acheteurs" %}
         </a>
       </div>
 
@@ -332,7 +341,7 @@
       </div>
 
       {# ── 4. Paramètres Système ────────────────────────────────────────────── #}
-      {% if request.user.role in "system_admin,government,apex_body" or request.user.is_superuser %}
+      {% if request.user.role in "admin,government,apex_body" or request.user.is_superuser %}
       <div class="nav-section">{% trans "Configuration" %}</div>
       <a class="nav-group-header {% if app_name == 'users' or app_name == 'sync' %}active{% endif %}"
         data-bs-toggle="collapse" href="#sb-system"
@@ -406,9 +415,9 @@
             {{ LANGUAGE_CODE|upper }}
           </button>
           <ul class="dropdown-menu dropdown-menu-end">
-            <li><a class="dropdown-item" href="/i18n/set_language/?language=en&next={{ request.path }}">English</a></li>
-            <li><a class="dropdown-item" href="/i18n/set_language/?language=ss&next={{ request.path }}">French</a></li>
-            <li><a class="dropdown-item" href="/i18n/set_language/?language=pt&next={{ request.path }}">Português</a>
+            <li><a class="dropdown-item" href="/i18n/set_language/?language=fr&next={{ request.path }}">Français</a></li>
+            <li><a class="dropdown-item" href="/i18n/set_language/?language=sw&next={{ request.path }}">Kiswahili</a></li>
+            <li><a class="dropdown-item" href="/i18n/set_language/?language=en&next={{ request.path }}">English</a>
             </li>
           </ul>
         </div>

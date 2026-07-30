@@ -22,8 +22,8 @@
     </div>
 
     <ul class="list-unstyled components">
-        <li class="{% if request.resolver_match.view_name == 'accounting:dashboard' %}active{% endif %}">
-            <a href="{% url 'accounting:dashboard' %}">
+        <li class="{% if request.resolver_match.view_name == 'analytics:dashboard' %}active{% endif %}">
+            <a href="{% url 'analytics:dashboard' %}">
                 <i class="bi bi-speedometer2"></i>
                 <span>Tableau de bord</span>
             </a>
