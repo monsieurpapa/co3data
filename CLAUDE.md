@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 CO3DATA's **target product** is a coffee/cocoa cooperative management system for DRC (Goma/Great Lakes region) — the workspace-wide DRC focus and French-first UI from the top-level `CLAUDE.md` apply here. That DRC/coffee/cocoa version is being newly designed; it does not exist in the code yet.
 
 ## Growth / Customer Acquisition
-Getting customers/GTM/launch questions → see the workspace-local `growth-playbook` skill (`.claude/skills/growth-playbook/SKILL.md`, referenced from the root `CLAUDE.md`).
+Getting customers/GTM/launch questions → see the workspace-local `growth-playbook` skill (`.claude/skills/growth-playbook/SKILL.md`, referenced from the root `CLAUDE.md`). For launch-video/viral-launch-on-X questions specifically → see the companion `launch-video` skill.
 
 What exists in the repo today is two prior, unrelated projects layered on top of each other:
 
